@@ -1,0 +1,180 @@
+---
+title: "Workshop 1"
+author: "Wenxuan Zhao"
+date: "2026-08-06"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## File Input/Output
+
+```{r}
+# Load in libraries
+library(readr)
+library(dplyr)
+library(ggplot2) 
+
+# Read in the data
+cereal = read.csv(file.path("..", "Datasets", "Cereal.csv"))
+
+# a)
+# cereal |> ...
+head(cereal)
+class(cereal)
+
+# b)
+colnames(cereal)
+nrow(cereal)
+dim(cereal)
+
+# c)
+Cal = cereal$calories
+
+# d)
+cereal = cereal[1:10, ]
+
+# e)
+Kelloggs = cereal[cereal$mfr == "K", ]
+Kelloggs
+```
+
+## Factors
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2) 
+
+# a)
+cereal.with.factors = read.csv(file.path("..", "Datasets", "Cereal.csv"), stringsAsFactors = TRUE)
+
+# b)
+levels(cereal.with.factors$mfr)
+nlevels(cereal.with.factors$type)
+```
+
+## Vectors
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2) 
+cereal.with.factors <- read.csv(file.path("..", "Datasets", "Cereal.csv"), stringsAsFactors = TRUE)
+
+# a)
+cereal.calories = cereal.with.factors$calories
+
+
+# b)
+length(cereal.calories)
+
+
+# c)
+cereal.calories[5:10]
+
+# d)
+cereal.calories = c(cereal.calories, 100)
+length(cereal.calories)
+```
+
+## Matrix
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2) 
+cereal <- read.csv(file.path("..", "Datasets", "Cereal.csv"))
+
+# a)
+cereal.matrix = as.matrix(cereal)
+is.matrix(cereal.matrix)
+is.character(cereal.matrix)
+
+# b)
+cereal.removed = cereal %>%
+  select(-mfr, -name, -type) %>%
+  as.matrix()
+
+is.matrix(cereal.removed)
+is.numeric(cereal.removed)
+
+```
+
+## Numerical Summary
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2) 
+cereal <- read.csv(file.path("..", "Datasets", "Cereal.csv"))
+
+# a)
+summary(cereal$sodium)
+
+
+# b)
+max(cereal$sodium)
+min(cereal$sodium)
+sd(cereal$sodium)
+mean(cereal$sodium)
+
+
+# c)
+# cereal |> select(...) |> group_by(...) |> summarise(...)
+cereal |>
+  group_by(mfr) |>
+  summarise(mean.sodium = mean(sodium))
+
+```
+
+## Graphical Summary
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2) 
+cereal <- read.csv(file.path("..", "Datasets", "Cereal.csv"))
+
+# a)
+boxplot(
+  sodium ~ mfr,
+  data = cereal,
+  xlab = "Manufacturer",
+  ylab = "Sodium",
+  main = "Sodium by Manufacturer"
+)
+
+# b)
+plot(
+  cereal$sodium,
+  cereal$calories,
+  xlab = "Sodium",
+  ylab = "Calories",
+  main = "Calories Against Sodium"
+)
+
+```
+
+## Write Data to File
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2) 
+cereal <- read.csv(file.path("..", "Datasets", "Cereal.csv"))
+
+# a)
+Kelloggs <- cereal |> filter(mfr == "K") 
+# write.csv(...)
+write.csv(
+  Kelloggs,
+  file.path("..", "Datasets", "kelloggs.csv"),
+  row.names = FALSE
+)
+
+
+```
+
