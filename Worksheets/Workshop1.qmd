@@ -1,0 +1,221 @@
+---
+title: "Workshop 1"
+author: "Wenxuan Zhao"
+date: "2026-08-06"
+format: html
+editor: visual
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(dplyr)
+library(ggplot2)
+
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## File Input/Output
+
+### a) Read and inspect the data
+
+Read `Cereal.csv` into R, display its first six observations, and check the class of the resulting object.
+
+```{r}
+cereal <- read.csv("../Datasets/Cereal.csv")
+
+head(cereal)
+class(cereal)
+```
+
+The data are stored as a data frame, with one row for each cereal and one column for each variable.
+
+### b) Examine the dimensions
+
+```{r}
+colnames(cereal)
+nrow(cereal)
+dim(cereal)
+```
+
+`colnames()` returns the variable names, `nrow()` gives the number of observations, and `dim()` reports both the number of rows and columns.
+
+### c) Extract the calorie variable
+
+```{r}
+Cal <- cereal$calories
+
+head(Cal)
+```
+
+### d) Retain the first 10 observations
+
+```{r}
+cereal_first_10 <- cereal[1:10, ]
+
+cereal_first_10
+```
+
+Using a new object preserves the complete `cereal` data frame for the remaining questions.
+
+### e) Select Kellogg's cereals
+
+```{r}
+Kelloggs <- cereal_first_10[cereal_first_10$mfr == "K", ]
+
+Kelloggs
+```
+
+The manufacturer code `K` represents Kellogg's.
+
+## Factors
+
+### a) Read character variables as factors
+
+```{r}
+cereal_with_factors <- read.csv(
+  "../Datasets/Cereal.csv",
+  stringsAsFactors = TRUE
+)
+
+str(cereal_with_factors)
+```
+
+### b) Inspect factor levels
+
+```{r}
+levels(cereal_with_factors$mfr)
+nlevels(cereal_with_factors$type)
+```
+
+`levels()` lists the manufacturer categories, while `nlevels()` returns the number of cereal-type categories.
+
+## Vectors
+
+### a) Create a calorie vector
+
+```{r}
+cereal_calories <- cereal_with_factors$calories
+```
+
+### b) Find the vector length
+
+```{r}
+length(cereal_calories)
+```
+
+### c) Extract elements 5 through 10
+
+```{r}
+cereal_calories[5:10]
+```
+
+### d) Append a value
+
+```{r}
+cereal_calories <- c(cereal_calories, 100)
+
+tail(cereal_calories)
+length(cereal_calories)
+```
+
+## Matrices
+
+### a) Convert the data frame to a matrix
+
+```{r}
+cereal_matrix <- as.matrix(cereal)
+
+is.matrix(cereal_matrix)
+is.character(cereal_matrix)
+```
+
+The matrix is a character matrix because a matrix can contain only one data type, and the original data include character columns.
+
+### b) Create a numeric matrix
+
+Remove the non-numeric variables before converting the data frame to a matrix.
+
+```{r}
+cereal_numeric_matrix <- cereal |>
+  select(-mfr, -name, -type) |>
+  as.matrix()
+
+is.matrix(cereal_numeric_matrix)
+is.numeric(cereal_numeric_matrix)
+```
+
+## Numerical Summary
+
+### a) Summarise sodium content
+
+```{r}
+summary(cereal$sodium)
+```
+
+### b) Calculate individual summary statistics
+
+```{r}
+max(cereal$sodium)
+min(cereal$sodium)
+sd(cereal$sodium)
+mean(cereal$sodium)
+```
+
+### c) Calculate mean sodium by manufacturer
+
+```{r}
+cereal |>
+  group_by(mfr) |>
+  summarise(
+    mean_sodium = mean(sodium),
+    .groups = "drop"
+  )
+```
+
+## Graphical Summary
+
+### a) Compare sodium across manufacturers
+
+```{r}
+boxplot(
+  sodium ~ mfr,
+  data = cereal,
+  xlab = "Manufacturer",
+  ylab = "Sodium (mg)",
+  main = "Sodium Content by Manufacturer",
+  col = "lightblue"
+)
+```
+
+### b) Examine calories against sodium
+
+```{r}
+plot(
+  cereal$sodium,
+  cereal$calories,
+  xlab = "Sodium (mg)",
+  ylab = "Calories",
+  main = "Calories Against Sodium",
+  pch = 19,
+  col = "steelblue"
+)
+```
+
+## Write Data to a File
+
+### a) Export all Kellogg's cereals
+
+Filter the complete dataset for Kellogg's cereals and save the result as a CSV file. Setting `row.names = FALSE` prevents R from adding row numbers as an extra column.
+
+```{r}
+Kelloggs <- cereal |>
+  filter(mfr == "K")
+
+write.csv(
+  Kelloggs,
+  "../Datasets/kelloggs.csv",
+  row.names = FALSE
+)
+```

@@ -1,0 +1,173 @@
+---
+title: "Workshop 2"
+author: "zwx"
+format: html
+editor: visual
+---
+
+## File I/O
+
+The path below is relative to this Quarto document. The first column in `Sonar.csv` contains row numbers, so `row.names = 1` prevents it from being read as an additional variable.
+
+### a) Read and inspect the data
+
+```{r}
+sonar <- read.csv("../Datasets/Sonar.csv", row.names = 1)
+
+# Confirm that sonar is a data frame
+is.data.frame(sonar)
+
+# Investigate the first six rows
+head(sonar)
+```
+
+`is.data.frame(sonar)` returns `TRUE`.
+
+### b) Read `Class` as a factor
+
+```{r}
+sonar <- read.csv(
+  "../Datasets/Sonar.csv",
+  row.names = 1,
+  # Include the original row-number column in the 62 CSV columns.
+  colClasses = c("character", rep("numeric", 60), "factor")
+)
+
+# Check the type of Class
+is.factor(sonar$Class)
+class(sonar$Class)
+```
+
+The checks confirm that `Class` is a factor.
+
+### c) Number of levels in `Class`
+
+```{r}
+nlevels(sonar$Class)
+levels(sonar$Class)
+```
+
+There are **2 levels**, `M` and `R`.
+
+### d) Work with `V1` as a vector
+
+```{r}
+v1 <- sonar$V1
+
+# Confirm that v1 is a vector and find its length
+is.vector(v1)
+length(v1)
+
+# Output elements 5 through 10 (inclusive)
+v1[5:10]
+
+# Append 1.5 to the end of the vector
+v1 <- c(v1, 1.5)
+tail(v1)
+length(v1)
+```
+
+Originally, `v1` contains **208 elements**. After appending `1.5`, it contains **209 elements**.
+
+### e) Convert to a matrix and remove `Class`
+
+```{r}
+sonar_matrix <- as.matrix(sonar)
+is.matrix(sonar_matrix)
+
+# Remove the Class column while retaining the matrix structure
+sonar_matrix <- sonar_matrix[, colnames(sonar_matrix) != "Class", drop = FALSE]
+
+# Confirm the result
+is.matrix(sonar_matrix)
+dim(sonar_matrix)
+colnames(sonar_matrix)
+```
+
+After removing `Class`, `sonar_matrix` has **208 rows and 60 columns**.
+
+## Numerical Summary
+
+### a) Quartiles and the shape of the `V1` distribution
+
+The `quantile()` function can return the first quartile, median and third quartile in a single call.
+
+```{r}
+quantile(sonar$V1, probs = c(0.25, 0.50, 0.75))
+
+# Compare the mean with the median
+mean(sonar$V1)
+median(sonar$V1)
+```
+
+The first quartile is **0.01335**, the median is **0.02280**, and the third quartile is **0.03555**. The mean (**0.02916**) is greater than the median (**0.02280**), suggesting that the distribution of `V1` is **right-skewed (positively skewed)**. In other words, some relatively large values extend the right tail and pull the mean upward.
+
+### b) Maximum, minimum, standard deviation and mean of `V1`
+
+```{r}
+max(sonar$V1)
+min(sonar$V1)
+sd(sonar$V1)
+mean(sonar$V1)
+```
+
+The maximum is **0.13710**, the minimum is **0.00150**, the standard deviation is approximately **0.02299**, and the mean is approximately **0.02916**.
+
+### c) Median of `V1` for each `Class` using tidyverse
+
+```{r}
+library(tidyverse)
+
+sonar |>
+  group_by(Class) |>
+  summarise(median_V1 = median(V1), .groups = "drop")
+```
+
+The median of `V1` is **0.0269** for class `M` and **0.0201** for class `R`.
+
+## Graphical Summary
+
+The following plots use `ggplot2`, which is included in the tidyverse package loaded above.
+
+### Boxplot of `V1` against `Class`
+
+```{r}
+ggplot(sonar, aes(x = Class, y = V1)) +
+  geom_boxplot() +
+  labs(
+    title = "Distribution of V1 by Class",
+    x = "Class",
+    y = "V1"
+  ) +
+  theme_minimal()
+```
+
+### Scatterplot of `V2` against `V1`
+
+```{r}
+ggplot(sonar, aes(x = V1, y = V2)) +
+  geom_point() +
+  labs(
+    title = "V2 against V1",
+    x = "V1",
+    y = "V2"
+  ) +
+  theme_minimal()
+```
+
+## Write Data to File
+
+First, filter the data to retain only observations in class `M`. Then use `write.csv()` to save the filtered data as `mine.csv`.
+
+```{r}
+mine <- sonar |>
+  filter(Class == "M")
+
+write.csv(mine, "../Datasets/mine.csv", row.names = FALSE)
+
+# Check the filtered data
+nrow(mine)
+unique(mine$Class)
+```
+
+The new dataset contains **111 observations**, all belonging to class `M`. Setting `row.names = FALSE` prevents R from adding a separate row-number column to the CSV file.

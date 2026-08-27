@@ -1,0 +1,555 @@
+---
+title: "Workshop3"
+author: "zwx"
+format: html
+editor: visual
+---
+
+## Melbourne House Prices Regression Model
+
+### Read and subset the data
+
+First, read the Melbourne housing dataset into R. Then create a new data frame called `melbdata_sub` containing properties in Brunswick, Craigieburn, or Hawthorn.
+
+The `%in%` operator checks whether each value of `Suburb` belongs to the specified group of suburbs.
+
+```{r}
+# Read the Melbourne housing dataset
+melbdata <- read.csv("../Datasets/Melbourne_housing_FULL.csv")
+
+# Retain observations from the three specified suburbs
+melbdata_sub <- subset(
+  melbdata,
+  Suburb %in% c("Brunswick", "Craigieburn", "Hawthorn")
+)
+```
+
+### Check the subset
+
+```{r}
+# Preview the filtered data
+head(melbdata_sub)
+
+# Check the number of observations from each suburb
+table(melbdata_sub$Suburb)
+
+# Display the dimensions of the new data frame
+dim(melbdata_sub)
+```
+
+## Exploratory Data Analysis
+
+We can compare the centre and spread of house prices across the three suburbs. Because `Price` contains missing values, `na.rm = TRUE` is used so that the missing observations are excluded from each calculation.
+
+### Average and median prices by suburb
+
+```{r}
+# Calculate the mean price for each suburb
+mean_price <- tapply(
+  melbdata_sub$Price,
+  melbdata_sub$Suburb,
+  mean,
+  na.rm = TRUE
+)
+
+# Calculate the median price for each suburb
+median_price <- tapply(
+  melbdata_sub$Price,
+  melbdata_sub$Suburb,
+  median,
+  na.rm = TRUE
+)
+
+# Combine the results into one summary table
+price_summary <- data.frame(
+  Suburb = names(mean_price),
+  Mean_Price = as.numeric(mean_price),
+  Median_Price = as.numeric(median_price)
+)
+
+price_summary
+```
+
+The mean is sensitive to unusually expensive properties, whereas the median describes the middle sale price and is more resistant to outliers. A mean that is noticeably greater than the median suggests a right-skewed price distribution.
+
+### Boxplot of prices by suburb
+
+```{r}
+boxplot(
+  Price ~ Suburb,
+  data = melbdata_sub,
+  col = c("steelblue", "darkseagreen3", "salmon"),
+  main = "House Prices in Three Melbourne Suburbs",
+  xlab = "Suburb",
+  ylab = "Price (AUD)",
+  las = 1
+)
+```
+
+The boxplot indicates that house prices differ among the three suburbs. Craigieburn has the lowest median and the smallest spread. Brunswick has the highest median price. Hawthorn has the greatest variability and several very high-priced properties; consequently, its mean is much higher than its median. Although the distributions overlap, their centres and spreads are visibly different. The boxplot provides descriptive evidence of differences, but a formal statistical test would be needed to determine whether those differences are statistically significant.
+
+## Modelling: Finding Associations
+
+We investigate whether properties with a larger building area tend to have a higher price. Price is measured in thousands of Australian dollars so that the regression coefficients are easier to interpret.
+
+### Fit a simple linear regression
+
+```{r}
+# Express price in thousands of Australian dollars
+melbdata_sub$Price_thousands <- melbdata_sub$Price / 1000
+
+# Fit the simple linear regression model
+price_area_model <- lm(
+  Price_thousands ~ BuildingArea,
+  data = melbdata_sub
+)
+
+# Display coefficient estimates and goodness-of-fit statistics
+summary(price_area_model)
+```
+
+The fitted regression equation has the form
+
+$$\widehat{\text{Price (thousands)}} = b_0 + b_1\text{BuildingArea}.$$
+
+The estimated slope is positive. It represents the estimated change in house price, in thousands of dollars, associated with an additional square metre of building area. The slope's small p-value provides evidence of a positive linear association. However, association does not by itself establish that increasing building area causes the price to increase.
+
+### Scatterplot and fitted regression line
+
+```{r}
+plot(
+  melbdata_sub$BuildingArea,
+  melbdata_sub$Price_thousands,
+  pch = 16,
+  col = rgb(0.1, 0.3, 0.7, 0.35),
+  main = "House Price and Building Area",
+  xlab = "Building area (square metres)",
+  ylab = "Price (thousands of AUD)"
+)
+
+abline(price_area_model, col = "red", lwd = 2)
+```
+
+The upward-sloping line supports a positive association between building area and price. Nevertheless, the observations are widely scattered around the line, and some properties have unusually large areas or prices. The scatterplot therefore suggests that a straight line captures only part of the relationship.
+
+### Residual diagnostics
+
+```{r}
+# Extract the model's fitted values and residuals
+model_fitted <- fitted(price_area_model)
+model_residuals <- residuals(price_area_model)
+
+# Residuals versus fitted values
+plot(
+  model_fitted,
+  model_residuals,
+  pch = 16,
+  col = rgb(0.1, 0.3, 0.7, 0.35),
+  main = "Residuals versus Fitted Values",
+  xlab = "Fitted price (thousands of AUD)",
+  ylab = "Residual"
+)
+abline(h = 0, col = "red", lwd = 2)
+
+# Normal Q-Q plot of the residuals
+qqnorm(
+  model_residuals,
+  pch = 16,
+  col = rgb(0.1, 0.3, 0.7, 0.35),
+  main = "Normal Q-Q Plot of Residuals"
+)
+qqline(model_residuals, col = "red", lwd = 2)
+```
+
+For a well-fitting simple linear regression, the residual plot should show a random cloud around zero with a roughly constant vertical spread. A systematic curve would question linearity, while a widening spread would question the constant-variance assumption. In the Q-Q plot, points close to the reference line would support approximately normal residuals; large departures, especially in the tails, indicate non-normality or outliers.
+
+For these data, the estimated relationship is positive and statistically significant, but the $R^2$ is only about 0.17. Thus, building area explains only about 17% of the observed variation in price. The wide scatter, influential properties, and residual departures show that this model has limited predictive performance. The original idea that larger houses tend to cost more is reasonable as a general association, but building area alone is not sufficient for accurately estimating house prices. Variables such as suburb, property type, number of rooms, land size, and location should also be considered.
+
+## Modelling: Removing Influential Observations
+
+Cook's distance measures how much the fitted regression would change if one observation were removed. Observations with unusually large Cook's distances may have excessive influence on the regression line.
+
+### Identify influential observations
+
+```{r}
+# Calculate Cook's distance for every observation used by the model
+price_area_cooks <- cooks.distance(price_area_model)
+
+# Plot Cook's distances
+plot(
+  price_area_cooks,
+  type = "h",
+  main = "Cook's Distance for the Original Model",
+  xlab = "Observation used in the regression",
+  ylab = "Cook's distance"
+)
+abline(
+  h = 4 / length(price_area_cooks),
+  col = "red",
+  lty = 2
+)
+
+# Find the two largest Cook's distances
+largest_cooks <- order(price_area_cooks, decreasing = TRUE)[1:2]
+
+# Model row names refer to rows retained from the original CSV file.
+original_row_numbers <- as.integer(names(price_area_cooks)[largest_cooks])
+
+# Convert them to positions within melbdata_sub for use with slice()
+influential_rows <- match(
+  original_row_numbers,
+  as.integer(rownames(melbdata_sub))
+)
+
+# Inspect the influential observations
+data.frame(
+  Subset_Row = influential_rows,
+  Original_Row = original_row_numbers,
+  Cooks_Distance = price_area_cooks[largest_cooks],
+  melbdata_sub[influential_rows, c("Suburb", "Price", "BuildingArea")]
+)
+```
+
+The two influential observations are rows 158 and 682 of `melbdata_sub`. Their original CSV data-row numbers are 2297 and 21254. The distinction matters because `slice()` uses positions in the current data frame, not the retained row names from the original data.
+
+### Remove the observations and refit the model
+
+```{r}
+library(dplyr)
+
+# Remove the two influential rows from the subset
+melbdata_clean <- melbdata_sub |>
+  slice(-influential_rows)
+
+# Refit the same regression using the cleaned data
+price_area_model_clean <- lm(
+  Price_thousands ~ BuildingArea,
+  data = melbdata_clean
+)
+
+summary(price_area_model_clean)
+```
+
+### Re-assess the cleaned model
+
+```{r}
+# Scatterplot and regression line for the cleaned data
+plot(
+  melbdata_clean$BuildingArea,
+  melbdata_clean$Price_thousands,
+  pch = 16,
+  col = rgb(0.1, 0.3, 0.7, 0.35),
+  main = "House Price and Building Area: Cleaned Data",
+  xlab = "Building area (square metres)",
+  ylab = "Price (thousands of AUD)"
+)
+abline(price_area_model_clean, col = "red", lwd = 2)
+
+# Standard regression diagnostic plots
+par(mfrow = c(1, 2))
+plot(price_area_model_clean, which = 1)
+plot(price_area_model_clean, which = 2)
+par(mfrow = c(1, 1))
+```
+
+### Compare the two models
+
+```{r}
+model_comparison <- data.frame(
+  Model = c("Original", "After removing two influential observations"),
+  Intercept = c(
+    coef(price_area_model)[1],
+    coef(price_area_model_clean)[1]
+  ),
+  BuildingArea_Slope = c(
+    coef(price_area_model)[2],
+    coef(price_area_model_clean)[2]
+  ),
+  R_squared = c(
+    summary(price_area_model)$r.squared,
+    summary(price_area_model_clean)$r.squared
+  ),
+  Residual_SE = c(
+    sigma(price_area_model),
+    sigma(price_area_model_clean)
+  )
+)
+
+model_comparison
+```
+
+After removing the two most influential observations, the estimated slope increases from about 3.80 to 6.08 thousand AUD per square metre. The $R^2$ increases from about 0.172 to 0.258, while the residual standard error decreases from about 730 to 691 thousand AUD. These changes confirm that the removed observations had a substantial effect on the original regression.
+
+The cleaned model fits better, but it still explains only about 26% of the variation in price. Residual outliers and departures from normality remain, so `BuildingArea` alone is still insufficient for accurate prediction. Removing observations should also be supported by a substantive reason, such as a data error or a property outside the intended population; a large Cook's distance alone does not automatically justify deletion.
+
+## Modelling II: Finding Association II
+
+The remainder of the workshop uses `melbdata_clean`. We now examine whether adding the categorical predictor `Suburb` improves price predictions beyond using `BuildingArea` alone.
+
+### Fit the multiple linear regression
+
+```{r}
+# Make the reference category explicit
+melbdata_clean$Suburb <- factor(
+  melbdata_clean$Suburb,
+  levels = c("Brunswick", "Craigieburn", "Hawthorn")
+)
+
+# BuildingArea is quantitative and Suburb is categorical
+price_area_suburb_model <- lm(
+  Price_thousands ~ BuildingArea + Suburb,
+  data = melbdata_clean
+)
+
+summary(price_area_suburb_model)
+```
+
+R treats `Brunswick` as the reference suburb. Therefore, the intercept belongs to Brunswick, while the Craigieburn and Hawthorn coefficients estimate their price differences from Brunswick after holding `BuildingArea` constant. Because this additive model does not include an interaction, it estimates the same `BuildingArea` slope for all three suburbs but allows each suburb to have a different intercept.
+
+### Compare the simple and multiple models
+
+```{r}
+# Compare goodness-of-fit measures
+model_II_comparison <- data.frame(
+  Model = c(
+    "BuildingArea only",
+    "BuildingArea and Suburb"
+  ),
+  R_squared = c(
+    summary(price_area_model_clean)$r.squared,
+    summary(price_area_suburb_model)$r.squared
+  ),
+  Adjusted_R_squared = c(
+    summary(price_area_model_clean)$adj.r.squared,
+    summary(price_area_suburb_model)$adj.r.squared
+  ),
+  Residual_SE = c(
+    sigma(price_area_model_clean),
+    sigma(price_area_suburb_model)
+  )
+)
+
+model_II_comparison
+
+# Test whether adding Suburb significantly improves the nested model
+anova(price_area_model_clean, price_area_suburb_model)
+```
+
+Adjusted $R^2$ is useful here because it accounts for the additional predictors. A higher adjusted $R^2$ and a lower residual standard error indicate improved fit. The nested-model ANOVA tests whether the two suburb indicator coefficients jointly add useful information.
+
+### Visualise the multiple regression
+
+```{r}
+# Use one colour for each suburb
+suburb_colours <- c(
+  Brunswick = "steelblue",
+  Craigieburn = "darkseagreen4",
+  Hawthorn = "salmon3"
+)
+
+# Plot observed prices
+plot(
+  melbdata_clean$BuildingArea,
+  melbdata_clean$Price_thousands,
+  pch = 16,
+  col = suburb_colours[melbdata_clean$Suburb],
+  main = "Price versus Building Area by Suburb",
+  xlab = "Building area (square metres)",
+  ylab = "Price (thousands of AUD)"
+)
+
+# Create predictor values for three fitted regression lines
+area_grid <- seq(
+  min(melbdata_clean$BuildingArea, na.rm = TRUE),
+  max(melbdata_clean$BuildingArea, na.rm = TRUE),
+  length.out = 200
+)
+
+for (current_suburb in levels(melbdata_clean$Suburb)) {
+  prediction_data <- data.frame(
+    BuildingArea = area_grid,
+    Suburb = factor(
+      current_suburb,
+      levels = levels(melbdata_clean$Suburb)
+    )
+  )
+
+  predicted_price <- predict(
+    price_area_suburb_model,
+    newdata = prediction_data
+  )
+
+  lines(
+    area_grid,
+    predicted_price,
+    col = suburb_colours[current_suburb],
+    lwd = 2
+  )
+}
+
+legend(
+  "topleft",
+  legend = names(suburb_colours),
+  col = suburb_colours,
+  pch = 16,
+  lty = 1,
+  lwd = 2,
+  bty = "n"
+)
+```
+
+The three fitted lines are parallel because the model assumes a common association between building area and price. Their different vertical positions show the estimated suburb effect after controlling for building area.
+
+Adding `Suburb` substantially improves the model. Adjusted $R^2$ increases from about 0.256 to 0.574, and the residual standard error decreases from about 691 to 523 thousand AUD. The nested-model ANOVA gives a p-value below 0.001, providing strong evidence that suburb adds predictive information. In the multiple model, an additional square metre of building area is associated with an estimated increase of about 7.69 thousand AUD, holding suburb constant. At the same building area, Craigieburn is predicted to be about 824 thousand AUD cheaper than Brunswick, while Hawthorn is predicted to be about 365 thousand AUD more expensive than Brunswick.
+
+Although the multiple regression is clearly better than the simple regression, about 42% of the price variation remains unexplained. Additional predictors and further diagnostic checks may therefore be needed.
+
+## Modelling II: Finding Association II Continued
+
+We add `Rooms` as a third predictor. The number of rooms is a reasonable candidate because, even among houses in the same suburb with similar building areas, properties with more rooms may have different prices.
+
+### Fit the extended multiple regression
+
+```{r}
+# Add Rooms to the previous multiple regression
+price_area_suburb_rooms_model <- lm(
+  Price_thousands ~ BuildingArea + Suburb + Rooms,
+  data = melbdata_clean
+)
+
+summary(price_area_suburb_rooms_model)
+```
+
+In this model, the `Rooms` coefficient estimates the average difference in price associated with one additional room while holding `BuildingArea` and `Suburb` constant.
+
+### Compare adjusted R-squared
+
+```{r}
+third_variable_comparison <- data.frame(
+  Model = c(
+    "BuildingArea + Suburb",
+    "BuildingArea + Suburb + Rooms"
+  ),
+  Multiple_R_squared = c(
+    summary(price_area_suburb_model)$r.squared,
+    summary(price_area_suburb_rooms_model)$r.squared
+  ),
+  Adjusted_R_squared = c(
+    summary(price_area_suburb_model)$adj.r.squared,
+    summary(price_area_suburb_rooms_model)$adj.r.squared
+  ),
+  Residual_SE = c(
+    sigma(price_area_suburb_model),
+    sigma(price_area_suburb_rooms_model)
+  )
+)
+
+third_variable_comparison
+
+# Test whether Rooms significantly improves the nested model
+anova(
+  price_area_suburb_model,
+  price_area_suburb_rooms_model
+)
+```
+
+Unlike ordinary $R^2$, adjusted $R^2$ penalises the inclusion of additional predictors. Consequently, an increase in adjusted $R^2$ indicates that `Rooms` improves the fit enough to justify the additional model parameter.
+
+### Visualise the change in adjusted R-squared
+
+```{r}
+barplot(
+  third_variable_comparison$Adjusted_R_squared,
+  names.arg = c("Area + Suburb", "Area + Suburb + Rooms"),
+  col = c("steelblue", "salmon3"),
+  ylim = c(0, 0.75),
+  main = "Adjusted R-squared Before and After Adding Rooms",
+  ylab = "Adjusted R-squared"
+)
+```
+
+Adding `Rooms` increases adjusted $R^2$ from approximately 0.574 to 0.661 and reduces the residual standard error from approximately 523 to 466 thousand AUD. The nested-model ANOVA gives a p-value below 0.001, providing strong evidence that `Rooms` adds useful information after accounting for building area and suburb.
+
+The fitted coefficient for `Rooms` is about 341.5, meaning that one additional room is associated with an estimated price increase of approximately 341.5 thousand AUD when building area and suburb are held constant. This is a conditional association rather than a causal effect. Overall, adding `Rooms` increases the adjusted $R^2$ and improves the model, although diagnostic checks and out-of-sample validation would still be needed to assess predictive performance fully.
+
+## Modelling II: Impact of Outliers and Prediction
+
+We first remove properties with implausibly small building areas of 5 square metres or less and unusually large building areas above 300 square metres. Missing building areas are also excluded by the logical condition used in `subset()`.
+
+### Remove building-area outliers
+
+```{r}
+melbdata_clean2 <- subset(
+  melbdata_clean,
+  BuildingArea > 5 & BuildingArea <= 300
+)
+
+# Compare the number of rows before and after filtering
+nrow(melbdata_clean)
+nrow(melbdata_clean2)
+
+# Check the retained range of building areas
+range(melbdata_clean2$BuildingArea)
+```
+
+The condition retains observations satisfying $5 < \text{BuildingArea} \leq 300$. Thus, observations with `BuildingArea <= 5`, `BuildingArea > 300`, or a missing building area are not included in `melbdata_clean2`.
+
+### Refit the area-and-suburb model
+
+```{r}
+lm_clean2 <- lm(
+  Price_thousands ~ BuildingArea + Suburb,
+  data = melbdata_clean2
+)
+
+summary(lm_clean2)
+
+# Examine the fitted relationship and residual diagnostics
+par(mfrow = c(1, 2))
+plot(lm_clean2, which = 1)
+plot(lm_clean2, which = 2)
+par(mfrow = c(1, 1))
+```
+
+After filtering the building-area outliers, this model has an adjusted $R^2$ of approximately 0.603 and a residual standard error of approximately 461 thousand AUD. These results are better than those from the corresponding model fitted before this additional filtering, although removing observations should always have a defensible substantive justification.
+
+### Fit `lm3` using building area, suburb, and car spaces
+
+The prediction exercise specifies that `lm3` is fitted using `melbdata_clean`, rather than `melbdata_clean2`.
+
+```{r}
+lm3 <- lm(
+  Price_thousands ~ BuildingArea + Suburb + Car,
+  data = melbdata_clean
+)
+
+summary(lm3)
+```
+
+### Predict the specified Hawthorn property
+
+```{r}
+# Predictor values for the property of interest
+hawthorn_house <- data.frame(
+  BuildingArea = 100,
+  Suburb = factor(
+    "Hawthorn",
+    levels = levels(melbdata_clean$Suburb)
+  ),
+  Car = 2
+)
+
+# Estimated mean price and its 95% confidence interval
+hawthorn_confidence <- predict(
+  lm3,
+  newdata = hawthorn_house,
+  interval = "confidence",
+  level = 0.95
+)
+
+hawthorn_confidence
+```
+
+Because `Price_thousands` is measured in thousands of AUD, the result gives a fitted price of approximately 1382.37 thousand AUD, with a 95% confidence interval from approximately 1273.10 to 1491.64 thousand AUD. Equivalently, the estimated mean price is approximately **\$1.382 million**, with a 95% confidence interval of approximately **\$1.273 million to \$1.492 million**.
+
+This confidence interval describes the uncertainty in the estimated **mean price** of houses with these characteristics. If the goal were to predict the sale price of one particular house, `interval = "prediction"` would be appropriate and would produce a substantially wider interval because it also includes house-to-house variation.
