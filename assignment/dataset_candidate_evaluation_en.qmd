@@ -1,0 +1,290 @@
+---
+title: "Candidate Dataset Evaluation Report: 2024 BRFSS"
+subtitle: "Comparison report for the STAT5003 group project"
+author: "STAT5003 Project Group"
+date: last-modified
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+    theme: cosmo
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+# Executive summary
+
+This report evaluates the **2024 Behavioral Risk Factor Surveillance System (BRFSS)**, published by the United States Centers for Disease Control and Prevention (CDC), as a candidate dataset for the STAT5003 group project. The proposed task is to classify adults' self-rated general health as **Excellent, Very good, Good, Fair, or Poor** using demographic characteristics, modifiable health behaviours, health-care access, and diagnosed chronic-condition indicators.
+
+The principal advantage of BRFSS is that it directly meets four assignment criteria---**Large, Messy, Complex, and Multi-class**---without relying on a debatable interpretation of data integration. It has an authoritative source, clear real-world relevance, and enough genuine data-quality challenges to support substantive exploratory data analysis. Its main disadvantages are its large file size, complicated survey coding, structured missingness, and weaker Australian relevance.
+
+Overall, BRFSS is a **high-rubric-fit, analytically valuable, but moderately demanding** candidate. It should be prioritised if the group wants a defensible dataset with extensive documentation and opportunities to demonstrate statistical judgement. A competing dataset may be preferable if it offers equally strong rubric coverage with greater Australian relevance or substantially lower implementation risk.
+
+# Candidate project overview
+
+## Classification task
+
+The response variable is `GENHLTH`, with five valid classes in their natural order:
+
+1. Excellent;
+2. Very good;
+3. Good;
+4. Fair;
+5. Poor.
+
+This is an ordinal multi-class classification task. Responses recorded as `Don't know/Not sure`, `Refused`, or missing are not additional health classes.
+
+## Research question
+
+> How accurately can adults' self-reported general health---excellent, very good, good, fair, or poor---be classified using demographic characteristics, modifiable health behaviours, health-care access, and diagnosed chronic-condition indicators in the 2024 BRFSS survey?
+
+The question is predictive rather than causal. BRFSS is a cross-sectional observational survey, so relationships identified by the analysis cannot establish that a predictor causes better or worse health.
+
+## Relevance and stakeholders
+
+Self-rated health provides a broad summary of physical, mental, and social wellbeing. The investigation could help public-health agencies:
+
+- identify groups more likely to report fair or poor health;
+- plan health-promotion and preventive services;
+- investigate health inequalities between socioeconomic and demographic groups;
+- allocate limited public-health resources more effectively;
+- determine whether prediction errors disproportionately affect minority or disadvantaged groups.
+
+Potential stakeholders include public-health agencies, community organisations, health-service planners, policy researchers, and the populations represented by the survey. The model should support population-level planning and research. It should not be used as an individual clinical diagnosis or as a basis for insurance pricing, treatment restrictions, or denial of services.
+
+# Data source and integrity
+
+## Authoritative sources
+
+The main official sources are:
+
+- [CDC BRFSS program website](https://www.cdc.gov/brfss/)
+- [2024 BRFSS survey data and documentation](https://www.cdc.gov/brfss/annual_data/annual_2024.html)
+- [2024 calculated-variable documentation](https://www.cdc.gov/brfss/annual_data/2024/pdf/2024-calculated-variables-version4-508.pdf)
+- [Complex sampling and weighting guidance](https://www.cdc.gov/brfss/annual_data/2024/pdf/Complex-Sampling-Weights-and-Preparing-Module-Data-for-Analysis-2024-508.pdf)
+- [2024 summary data-quality report](https://www.cdc.gov/brfss/annual_data/2024/pdf/2024-DQR-508.pdf)
+
+The local data file is `LLCP2024XPT.zip`. The CDC content-delivery network rejected automated retrieval from the project environment, so the local copy was obtained from a [public GitHub mirror](https://github.com/DhanushGWU1995/6103-data-mining-project/blob/main/Raw_input_data_files/LLCP2024XPT.zip) that identifies the CDC page as its original source. A complete read of the file verified 457,670 observations and 301 variables.
+
+The archive's SHA-256 checksum is:
+
+```text
+D33DE91A584E866F657D29B1D5B51B5672467286ED22D021E36EE3C7B4D712A4
+```
+
+## Documentation discrepancy
+
+The CDC 2024 download page describes the SAS Transport file as containing 345 variables. However, the CDC year-by-year surveillance table and the actual XPT file both report 301 variables. The analysis should use the 301 columns present in the supplied file and record this inconsistency as part of the provenance audit.
+
+The ZIP member name `LLCP2024.XPT ` also contains a trailing space. The English EDA QMD already uses extraction code that accommodates this issue. It does not alter the data, but it illustrates the importance of auditing real source files before analysis.
+
+# Alignment with the assignment requirements
+
+| Requirement | Met? | Evidence | Evidence to present |
+|:--|:--:|:--|:--|
+| Large | Yes | 457,670 observations, far above 10,000 | Row count, object size, and computational implications |
+| Messy | Yes | Native missingness, coded non-response, skip logic, and optional modules | Missingness proportion and pattern plots, plus coding discussion |
+| Complex | Yes | 301 variables with different statistical types and measurement roles | Feature count, types, dimensionality, and leakage risks |
+| Integrated | Not claimed | CDC aggregates regions and telephone modes, but this criterion is unnecessary | Not required as a core argument |
+| Multi-class | Yes | Five valid ordered classes in `GENHLTH` | Class counts, proportions, plot, and imbalance discussion |
+
+BRFSS clearly satisfies four requirements, exceeding the minimum of three. The dataset remains eligible even if the marker does not consider CDC's aggregation process to be data integration.
+
+# Preliminary data evidence
+
+## Dataset size
+
+- Observations: 457,670;
+- Variables: 301;
+- Compressed archive: approximately 83 MB;
+- Extracted XPT file: approximately 1.09 GB;
+- Theoretical base memory for a dense numeric matrix: approximately 1.10 GB, excluding R object and label overhead.
+
+The dataset is manageable on a typical laptop, but the workflow must avoid unnecessary copies and expensive visualisations across every variable.
+
+## Response-class distribution
+
+| Class | Sample count | Percentage of valid responses |
+|:--|--:|--:|
+| Excellent | 64,217 | 14.07% |
+| Very good | 145,791 | 31.95% |
+| Good | 156,229 | 34.23% |
+| Fair | 67,919 | 14.88% |
+| Poor | 22,204 | 4.87% |
+| **Valid total** | **456,360** | **100.00%** |
+
+An additional 915 respondents selected `Don't know/Not sure`, and 390 refused the question. The largest valid class is approximately seven times the size of the smallest. Overall accuracy could therefore conceal low recall for the `Poor` class.
+
+## Missing-data characteristics
+
+Missing information occurs through at least three mechanisms:
+
+1. native `NA` values in the file;
+2. numeric codes such as 7, 9, 77, or 99 representing unknown or refused responses;
+3. structural missingness caused by questionnaire skip logic or optional modules not used in every jurisdiction.
+
+The meanings of special codes vary by variable. A global replacement of every 7, 9, 77, and 99 with `NA` would corrupt valid data. Recoding must therefore follow the codebook on a variable-by-variable basis.
+
+# Advantages
+
+## Advantages for satisfying the marking criteria
+
+1. **Four criteria are supported by direct evidence.** Row count, column count, missingness, and the five response classes can all be demonstrated with reproducible code and figures.
+2. **The source is not Kaggle.** BRFSS is an official government surveillance dataset and does not involve a prohibited topic.
+3. **It supports substantive EDA.** Missingness, response imbalance, variable roles, memory cost, special coding, and survey weights all warrant investigation.
+4. **The research question is focused.** One well-defined response variable provides five clearly interpretable classes.
+5. **It requires meaningful modelling decisions.** The group can compare ordinal and nominal multi-class methods while addressing imbalance and survey design.
+6. **It contains a clear leakage example.** `_RFHLTH` is derived directly from `GENHLTH`; identifying and excluding it demonstrates careful data understanding.
+
+## Data and research advantages
+
+1. **Large sample size.** The data support an independent test set, minority-class assessment, and subgroup performance analysis.
+2. **Broad feature coverage.** Variables cover demographics, behaviours, health-care access, chronic conditions, and survey design.
+3. **Strong real-world relevance.** Health inequality and public-health resource allocation have clear global importance.
+4. **Extensive documentation.** CDC provides a codebook, calculated-variable definitions, weighting guidance, and a data-quality report.
+5. **Naturally ordered outcome.** The project can compare standard multi-class and ordinal approaches and discuss the severity of different classification errors.
+6. **Scope for fairness analysis.** The sample is large enough to compare errors across demographic, socioeconomic, and geographic groups.
+
+## Implementation advantages
+
+1. The data have already been downloaded and validated.
+2. An existing English QMD contains data import, missingness visualisation, class-distribution analysis, and initial modelling decisions.
+3. A single annual file avoids designing uncertain cross-table linkage keys.
+4. R can read the XPT data directly through `haven`; SAS software is not required.
+
+# Disadvantages and risks
+
+## Computational and technical costs
+
+1. **The extracted file is large.** The XPT file is approximately 1.09 GB and requires additional memory after import.
+2. **Initial runs may be slow.** Extracting and scanning 301 variables makes QMD debugging slower than working with a small CSV.
+3. **Additional R packages are required.** At minimum, the workflow uses `haven`, `dplyr`, `tidyr`, `ggplot2`, and `scales`.
+4. **Variable names are not self-explanatory.** Names such as `_LLCPWT` and `_RFHLTH` require consultation of the documentation.
+5. **The archived member has a trailing-space issue.** This has been addressed in the QMD but adds a reproducibility detail.
+
+## Statistical and data-quality risks
+
+1. **Special missing-value codes are complicated.** Incorrect global recoding could destroy valid observations.
+2. **Missingness is not random.** Optional modules and skip logic associate missingness with jurisdiction, questionnaire version, or earlier answers.
+3. **Target leakage is a serious risk.** `_RFHLTH` is calculated directly from `GENHLTH`, and other derived variables also require auditing.
+4. **Survey weights complicate interpretation.** Weighted population description and unweighted individual prediction answer different questions and must be distinguished.
+5. **Classes are imbalanced.** `Poor` accounts for only 4.87% of valid responses, making accuracy insufficient as the sole metric.
+6. **High dimensionality may cause overfitting.** The 301 columns include redundant fields, administrative variables, derived measures, and geographically restricted modules.
+
+## Interpretation limitations
+
+1. **The analysis cannot support causal claims.** Cross-sectional survey data identify prediction relationships and associations only.
+2. **The response is subjective.** Different cultures, ages, or social groups may interpret health categories differently.
+3. **Recall and social-desirability bias may be present.** Most behaviours and conditions are self-reported.
+4. **Telephone surveying creates selection risk.** Weighting can reduce but not eliminate non-response and coverage bias.
+5. **Australian relevance is limited.** The population is drawn from the United States and participating territories, so external validation would be necessary before transfer to Australia.
+6. **The model could be misused.** Individual diagnosis, insurance, or service restrictions could harm already disadvantaged groups.
+
+## Competitiveness risk
+
+BRFSS is a public and widely used health survey. It may appear less original than a less frequently studied Australian dataset. The group would need to distinguish the project through a focused five-class question, rigorous missing-data audit, explicit leakage analysis, and appropriate treatment of the ordinal outcome.
+
+# Feasibility and expected workload
+
+| Work component | Difficulty | Main tasks |
+|:--|:--:|:--|
+| Data import | Moderate | Extract XPT, manage memory, verify dimensions |
+| Data dictionary | High | Identify candidate variables, types, and special codes |
+| Missingness analysis | High | Separate native, coded, and structural missingness |
+| Response EDA | Low | Counts, proportions, weighted distribution, and imbalance |
+| Univariate and bivariate EDA | Moderate | Select informative variables rather than plotting all 301 |
+| Data cleaning | High | Recode values, audit derived variables, prevent leakage |
+| Baseline modelling | Moderate | Ordinal or multinomial logistic regression |
+| Extended modelling | Moderate to high | Regularisation or tree models, validation, fairness checks |
+| Reporting | Moderate | Separate descriptive, predictive, and causal interpretations |
+
+The main workload is not downloading the data or drawing plots; it is understanding the variables correctly. The group should select approximately 20--40 theoretically justified candidate predictors early and maintain a concise data dictionary.
+
+# Recommended modelling direction
+
+## Baseline models
+
+- a majority-class classifier as a minimum-performance benchmark;
+- proportional-odds ordinal logistic regression to use the response ordering;
+- regularised multinomial logistic regression for correlated predictors.
+
+## Extended models
+
+- random forest or gradient boosting to capture non-linearity and interactions;
+- class weights to improve recognition of minority classes such as `Poor`;
+- geographic validation to assess transfer across states or regions.
+
+## Recommended evaluation measures
+
+- macro-averaged F1;
+- balanced accuracy;
+- class-specific precision and recall;
+- confusion matrix;
+- weighted Cohen's kappa or another ordinal metric;
+- error rates across major population subgroups.
+
+Overall accuracy should not be reported alone. Imputation or resampling must not occur before the training and test sets are separated.
+
+# Comparative scoring
+
+All candidate datasets should be scored using the same criteria and weights. The following scores are an initial subjective assessment of BRFSS on a five-point scale.
+
+| Comparison dimension | Suggested weight | BRFSS score | Rationale |
+|:--|--:|--:|:--|
+| Alignment with assignment requirements | 25% | 5.0 | Directly meets four requirements |
+| Clarity of research question | 15% | 4.5 | Response and five classes are clearly defined |
+| Real-world relevance | 15% | 4.5 | Strong public-health value, but not Australian data |
+| Authority and documentation | 15% | 4.5 | Official CDC source and strong documentation; metadata discrepancy exists |
+| EDA potential | 10% | 5.0 | Rich missingness, type, class, and weighting issues |
+| Technical feasibility | 10% | 3.5 | Feasible but computationally and conceptually demanding |
+| Originality | 5% | 3.5 | Common dataset; distinctive research design is needed |
+| Ethics and fairness discussion | 5% | 5.0 | Clear stakeholders, fairness issues, and misuse risks |
+
+Using these weights, the suggested overall score is:
+
+$$
+0.25(5.0)+0.15(4.5)+0.15(4.5)+0.15(4.5)+0.10(5.0)+0.10(3.5)+0.05(3.5)+0.05(5.0)=4.55.
+$$
+
+This score supports internal comparison and is not a prediction of the final assignment mark. The same weights and standards must be applied to every candidate for the comparison to be meaningful.
+
+# Selection recommendation
+
+## When BRFSS should be selected
+
+BRFSS is recommended if the group wants to:
+
+- minimise the risk of failing the three-requirement rule;
+- use an authoritative dataset with clear real-world significance;
+- demonstrate missing-data reasoning, class imbalance, and high-dimensional EDA;
+- compare ordinal and standard multi-class methods;
+- invest sufficient time in the codebook and careful data preparation.
+
+## When another dataset may be preferable
+
+A competing dataset may be stronger if it provides:
+
+- an Australian problem and Australian data source;
+- equally clear evidence for at least three dataset requirements;
+- a more manageable file and fewer special response codes;
+- lower target-leakage risk;
+- a more original topic with equally clear stakeholders;
+- substantially less preparation work when group time is limited.
+
+# Final conclusion
+
+BRFSS is a **high-fit, high-value, medium-to-high-workload** candidate. Its strongest competitive advantage is that four assignment requirements are supported by direct evidence and naturally lead to a rigorous EDA. Its most important disadvantages are weaker Australian relevance and the substantial effort required to handle survey coding and structural missingness correctly.
+
+Until the other candidates are assessed, BRFSS should remain on the final shortlist and serve as a benchmark. For another dataset to be preferable, it should ideally offer stronger Australian relevance or lower implementation risk while still providing equally convincing evidence for at least three assignment requirements.
+
+# Related project files
+
+- `assignment_analysis.qmd`: complete English project framing and executable EDA;
+- `LLCP2024XPT.zip`: compressed 2024 BRFSS source data;
+- `dataset_candidate_evaluation_zh.qmd`: Chinese candidate evaluation report;
+- `dataset_candidate_evaluation_en.qmd`: this English candidate evaluation report.
+
