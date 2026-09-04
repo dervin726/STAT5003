@@ -1,0 +1,365 @@
+---
+title: "项目规划与探索性数据分析"
+subtitle: "利用智能手机传感器识别日常活动"
+author: "STAT5003"
+date: last-modified
+lang: zh
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+    code-tools: true
+    fig-width: 9
+    fig-height: 5
+    theme: cosmo
+execute:
+  echo: true
+  warning: false
+  message: false
+  cache: true
+---
+
+# 研究问题与数据集选择
+
+## 现实分类任务
+
+本项目研究能否根据腰部智能手机的加速度计和陀螺仪测量数据，对一个人正在进行的活动进行分类。目标变量包含六个类别：**步行、上楼、下楼、坐姿、站立和躺卧**。这些类别不存在完整的自然顺序，因此这是一个无序多分类问题。
+
+## 研究问题
+
+> 对于未参与模型训练的新受试者，利用智能手机传感器的时域和频域特征，能够以多高的准确度识别六种常见日常活动？
+
+“未参与训练的新受试者”是研究问题的重要组成部分。同一参与者会产生多个时间窗口。如果随机拆分数据行，同一个人的运动模式可能同时进入训练集和测试集，从而高估模型表现。数据发布者提供的按参与者划分的数据集能够更真实地评价模型对新用户的泛化能力。
+
+## 研究意义与利益相关者
+
+人体活动识别可以用于健身记录、情境感知移动应用、工作场所安全系统，以及在经过临床验证后用于行动能力或康复监测。利益相关者包括设备开发者、研究人员、临床人员、服务机构以及其活动被测量的用户。
+
+本数据集属于受控实验环境下的基准数据，不能直接作为临床诊断工具。错误分类可能产生误导性的健康或安全判断，而持续采集运动数据还涉及隐私与监控风险。实际部署需要取得知情同意、遵循数据最小化原则、安全存储数据、在目标人群中重新验证，并为用户提供明确的退出机制。
+
+# 数据来源与可追溯性
+
+**Human Activity Recognition Using Smartphones** 数据集由 [UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones) 发布。实验招募了 30 名年龄为 19–48 岁的志愿者。参与者将 Samsung Galaxy S II 手机佩戴在腰部并完成六种活动。手机的加速度计和陀螺仪以 50 Hz 频率采集数据。研究者将信号划分为长度 2.56 秒、重叠率 50% 的窗口，并生成 561 个时域和频域特征。
+
+本地文件 `UCI_HAR_Dataset.zip` 直接下载自 UCI 官方分发地址，其 SHA-256 校验值为：
+
+```text
+C00B803081A5C797CD5E4B83700A9810B38D53D9D84E01917E090E1FDBC81031
+```
+
+该数据最初由 Anguita 等人（2013）介绍。UCI 已按照参与者将数据划分为训练集和测试集：约 70% 的参与者用于训练，其余参与者用于测试。本地文件包含 7,352 个训练窗口和 2,947 个测试窗口。
+
+该数据来自 UCI 而非 Kaggle，不是 R 内置数据集，也不涉及作业禁止的主题。
+
+# 数据读取与完整性检查
+
+UCI 下载文件中还包含一个内层 ZIP。以下代码将两层压缩包解压到 R 会话的临时目录，读取特征名称和活动标签，并在保留官方训练／测试角色的前提下合并数据。
+
+```{r}
+#| label: setup
+#| include: false
+
+required_packages <- c("dplyr", "tidyr", "ggplot2", "scales", "knitr")
+missing_packages <- required_packages[
+  !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)
+]
+if (length(missing_packages) > 0) {
+  stop("渲染前请安装以下 R 包：", paste(missing_packages, collapse = ", "))
+}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(knitr)
+theme_set(theme_minimal(base_size = 12, base_family = "Arial Unicode MS"))
+```
+
+```{r}
+#| label: import-data
+
+data_zip <- "UCI_HAR_Dataset.zip"
+stopifnot(file.exists(data_zip))
+
+extract_root <- file.path(tempdir(), "uci_har_240_zh")
+dir.create(extract_root, recursive = TRUE, showWarnings = FALSE)
+unzip(data_zip, exdir = extract_root, overwrite = TRUE)
+
+inner_zip <- list.files(
+  extract_root,
+  pattern = "UCI HAR Dataset[.]zip$",
+  full.names = TRUE
+)
+if (length(inner_zip) != 1) stop("内层数据压缩包数量不等于 1。")
+unzip(inner_zip, exdir = extract_root, overwrite = TRUE)
+data_dir <- file.path(extract_root, "UCI HAR Dataset")
+
+feature_key <- read.table(
+  file.path(data_dir, "features.txt"),
+  col.names = c("feature_id", "feature_name"),
+  stringsAsFactors = FALSE
+)
+activity_key <- read.table(
+  file.path(data_dir, "activity_labels.txt"),
+  col.names = c("activity_id", "activity"),
+  stringsAsFactors = FALSE
+)
+
+# 官方特征元数据中有 84 个重复名称。
+# make.unique() 保留全部 561 列，同时生成可由 R 安全使用的唯一名称。
+feature_names <- make.unique(feature_key$feature_name, sep = "__duplicate_")
+
+read_partition <- function(partition) {
+  x <- read.table(file.path(data_dir, partition, paste0("X_", partition, ".txt")))
+  names(x) <- feature_names
+  y <- scan(file.path(data_dir, partition, paste0("y_", partition, ".txt")),
+            quiet = TRUE)
+  subject <- scan(
+    file.path(data_dir, partition, paste0("subject_", partition, ".txt")),
+    quiet = TRUE
+  )
+
+  bind_cols(
+    tibble(partition = partition, subject = subject, activity_id = y),
+    as_tibble(x, .name_repair = "minimal")
+  ) |>
+    left_join(activity_key, by = "activity_id") |>
+    relocate(activity, .after = activity_id)
+}
+
+har <- bind_rows(read_partition("train"), read_partition("test")) |>
+  mutate(
+    partition = factor(partition, levels = c("train", "test")),
+    activity = factor(activity, levels = activity_key$activity)
+  )
+
+predictor_names <- feature_names
+```
+
+```{r}
+#| label: integrity-audit
+
+integrity_summary <- tibble(
+  检查项目 = c(
+    "观测数", "传感器特征数", "分析数据总列数", "参与者人数",
+    "预测变量缺失值数", "预测变量非有限值数",
+    "原始重复特征名称数", "训练集与测试集共有的参与者数"
+  ),
+  数值 = c(
+    nrow(har), length(predictor_names), ncol(har), n_distinct(har$subject),
+    sum(is.na(har[predictor_names])),
+    sum(!is.finite(as.matrix(har[predictor_names]))),
+    sum(duplicated(feature_key$feature_name)),
+    length(intersect(
+      unique(har$subject[har$partition == "train"]),
+      unique(har$subject[har$partition == "test"])
+    ))
+  )
+)
+
+kable(integrity_summary, align = c("l", "r"))
+```
+
+完整性检查应得到 10,299 条观测、561 个传感器特征、30 名参与者、零个缺失或非有限预测值、84 个重复的原始特征名称，以及零个同时出现在训练集和测试集的参与者。重复名称是元数据问题，而不是重复的数据列；代码通过确定性的方式修复名称并保留所有特征。
+
+# 作业要求匹配度
+
+该数据集无需对“Messy”或“Integrated”作有争议的解释，便能明确满足三项作业要求。
+
+| 要求 | 证据 |
+|:--|:--|
+| Large | 10,299 条观测，刚刚超过 10,000 条的门槛 |
+| Complex | 561 个传感器特征，远高于 100 个变量的门槛 |
+| Multi-class | 六个无序活动类别 |
+
+它的规模明显小于 2024 BRFSS 方案（457,670 行、301 个变量），普通笔记本电脑即可较快完成分析。其核心难点是高维度和变量冗余，而不是文件大小或复杂的缺失编码。
+
+## 数据规模与类别平衡
+
+```{r}
+#| label: class-distribution
+
+activity_names_zh <- c(
+  WALKING = "步行", WALKING_UPSTAIRS = "上楼", WALKING_DOWNSTAIRS = "下楼",
+  SITTING = "坐姿", STANDING = "站立", LAYING = "躺卧"
+)
+
+class_distribution <- har |>
+  count(activity, name = "窗口数") |>
+  mutate(
+    比例 = 窗口数 / sum(窗口数),
+    活动 = factor(activity_names_zh[as.character(activity)],
+                  levels = unname(activity_names_zh))
+  )
+
+kable(
+  class_distribution |>
+    transmute(活动, 窗口数, 比例 = percent(比例, accuracy = 0.1)),
+  align = c("l", "r", "r")
+)
+```
+
+```{r}
+#| label: class-distribution-plot
+#| fig-cap: "全部 10,299 个时间窗口中六种活动的类别分布。"
+
+ggplot(class_distribution,
+       aes(x = reorder(活动, 窗口数), y = 窗口数, fill = 活动)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = percent(比例, accuracy = 0.1)),
+            hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  scale_y_continuous(labels = comma,
+                     expand = expansion(mult = c(0, 0.12))) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "六个活动类别较为平衡", x = NULL, y = "时间窗口数")
+```
+
+最大类别是“躺卧”，最小类别是“下楼”，两者样本数之比小于 1.4。总体准确率具有一定解释价值，但仍应报告 Macro F1 和每类召回率，因为坐姿和站立在物理状态上较为相似，其错误率可能不同。
+
+## 高维度与变量冗余
+
+561 个预测变量均为传感器窗口的数值摘要，包括均值、标准差、信号幅度面积、相关系数、自回归系数、频率成分、熵和角度变量。大量变量由相互关联的信号经过不同变换得到，因此可能存在严重的相关性和多重共线性。
+
+```{r}
+#| label: feature-audit
+
+feature_sd <- vapply(har[predictor_names], sd, numeric(1))
+feature_unique <- vapply(har[predictor_names], n_distinct, integer(1))
+
+feature_summary <- tibble(
+  统计量 = c(
+    "预测变量数", "零方差预测变量数", "近似常量预测变量数（不超过 10 个不同值）",
+    "全体预测值的最小值", "全体预测值的最大值"
+  ),
+  数值 = c(
+    length(predictor_names), sum(feature_sd == 0), sum(feature_unique <= 10),
+    min(as.matrix(har[predictor_names])), max(as.matrix(har[predictor_names]))
+  )
+)
+
+kable(feature_summary, align = c("l", "r"), digits = 3)
+```
+
+```{r}
+#| label: correlation-audit
+
+correlation_matrix <- cor(as.matrix(har[predictor_names]))
+upper_correlations <- abs(correlation_matrix[upper.tri(correlation_matrix)])
+
+correlation_summary <- tibble(
+  相关阈值 = c("|r| >= 0.80", "|r| >= 0.90", "|r| >= 0.95", "|r| >= 0.99"),
+  特征对数量 = c(
+    sum(upper_correlations >= 0.80), sum(upper_correlations >= 0.90),
+    sum(upper_correlations >= 0.95), sum(upper_correlations >= 0.99)
+  )
+)
+
+kable(correlation_summary, align = c("l", "r"))
+```
+
+相关性检查说明，直接将所有变量放入无正则化模型会导致估计不稳定且难以解释。建模时需要使用降维、正则化或经过验证的特征筛选。所有预处理参数都只能在训练数据上估计。
+
+## 活动结构的低维可视化
+
+主成分分析（PCA）可以将 561 维特征空间压缩后进行可视化。以下 PCA 只使用训练数据拟合，再将完全相同的变换应用于未参与拟合的测试受试者。
+
+```{r}
+#| label: pca
+
+train_index <- har$partition == "train"
+pca_fit <- prcomp(har[train_index, predictor_names], center = TRUE, scale. = TRUE)
+
+pca_scores <- predict(pca_fit, newdata = har[predictor_names])[, 1:2] |>
+  as_tibble() |>
+  bind_cols(har |> select(activity, partition)) |>
+  mutate(
+    活动 = factor(activity_names_zh[as.character(activity)],
+                  levels = unname(activity_names_zh)),
+    数据分区 = factor(partition, levels = c("train", "test"),
+                      labels = c("训练集", "测试集"))
+  )
+
+explained <- 100 * pca_fit$sdev^2 / sum(pca_fit$sdev^2)
+```
+
+```{r}
+#| label: pca-plot
+#| fig-cap: "前两个主成分。PCA 仅使用训练参与者的数据拟合。"
+
+ggplot(pca_scores, aes(PC1, PC2, colour = 活动)) +
+  geom_point(alpha = 0.35, size = 0.7) +
+  facet_wrap(~数据分区) +
+  scale_colour_brewer(palette = "Dark2") +
+  labs(
+    title = "前两个主成分能够区分主要活动类型",
+    subtitle = paste0(
+      "PC1 和 PC2 分别解释标准化方差的 ", round(explained[1], 1), "% 和 ",
+      round(explained[2], 1), "%"
+    ),
+    colour = "活动"
+  )
+```
+
+该图只用于描述数据结构，不能作为模型性能证据。二维空间中的分离并不意味着两个主成分足以完成分类；坐姿和站立等相近活动之间出现重叠也符合预期。
+
+# 数据准备计划
+
+1. 保留 UCI 按参与者划分的训练集和测试集，不随机重新划分单个时间窗口。
+2. 在所有模型与预处理方案确定前，不使用测试集进行选择或调参。
+3. 以可复现方式修复重复的特征名称，同时保留原始名称映射。
+4. 中心化、标准化、PCA、相关性过滤和其他特征筛选只能使用训练数据估计。
+5. 删除零方差变量；对于线性模型，考虑相关性过滤或 PCA。
+6. 在训练集内部按照 `subject` 进行分组交叉验证，保证每折验证对象未出现在该折训练数据中。
+7. 保留所有六个目标类别，并分别报告各类别错误率。
+
+由于同一参与者的相邻窗口彼此重叠，10,299 条数据并非完全独立。若忽略参与者层面的聚类结构，将夸大有效样本量。统计推断与不确定性估计必须考虑这种依赖关系。
+
+# EDA 对建模方案的启示
+
+合理的基线模型是：先进行只基于训练集的标准化和降维，再拟合多项 Logistic 回归。正则化多项回归可作为更强的线性模型。随机森林或 gradient boosting 可以处理非线性关系和交互作用；支持向量机也适合该高维特征空间。
+
+模型调参应采用按参与者分组的交叉验证。最终只使用一次官方测试集进行评价。建议报告：
+
+- 总体 accuracy 和 Macro F1；
+- balanced accuracy；
+- 每个类别的 precision 和 recall；
+- 六分类 confusion matrix；
+- 各测试参与者的分类准确率。
+
+最值得关注的错误可能出现在三种动态活动之间，或坐姿与站立之间。将静态姿势误判为动态活动，与混淆两种相似的步行状态具有不同含义，因此所有综合指标都应配合混淆矩阵解释。
+
+# 优势、局限与伦理问题
+
+## 优势
+
+- 通过客观数值证据明确满足三项作业要求。
+- 压缩后约 59 MB、共 10,299 行，普通笔记本电脑即可处理。
+- 官方参与者级划分支持严谨的模型泛化问题。
+- 类别较为平衡，活动标签通过录像辅助标注。
+- 561 个特征为降维和相关性分析提供充分空间。
+
+## 局限
+
+- 只有 30 名 19–48 岁的参与者，人口多样性有限。
+- 活动是在受控条件下完成的，在自然生活环境中的表现可能下降。
+- 手机固定在腰部，结果未必适用于口袋、背包、手腕或其他设备。
+- 重叠窗口相互关联，不能视为完全独立的观测。
+- 工程化特征隐藏了部分原始信号细节，并包含高度冗余的变换。
+- 数据没有缺失值，能够展示的缺失数据处理内容较少。
+
+## 伦理考虑
+
+运动数据可能暴露健康状况、日常规律、与位置相关的行为或其他敏感信息。实际系统需要知情同意、目的限制、安全的数据处理方式，并明确禁止未经同意的雇主监控、保险定价或其他监视用途。在用于重要决策之前，还应针对不同年龄、体型、行动能力、手机设备和携带位置重新验证性能。
+
+# 总体建议
+
+该数据集是 BRFSS 的一个高质量、低工作量替代方案。它直接满足 **Large、Complex 和 Multi-class** 三项要求，同时规模足够小，能够快速迭代。由于数据本身较为干净，分析重点将从缺失值处理转向防止数据泄漏、高维降维、相关预测变量以及参与者级泛化。如果小组希望完成一个技术上严谨的分类项目，同时避免 2024 BRFSS 带来的内存压力和复杂编码工作，该数据集非常合适。
+
+# 参考文献
+
+Anguita, D., Ghio, A., Oneto, L., Parra, X., & Reyes-Ortiz, J. L. (2013). *A public domain dataset for human activity recognition using smartphones*. 21st European Symposium on Artificial Neural Networks, Computational Intelligence and Machine Learning, 437–442.
+
+Reyes-Ortiz, J. L., Anguita, D., Ghio, A., Oneto, L., & Parra, X. (2012). *Human Activity Recognition Using Smartphones* [Dataset]. UCI Machine Learning Repository. <https://doi.org/10.24432/C54S4K>

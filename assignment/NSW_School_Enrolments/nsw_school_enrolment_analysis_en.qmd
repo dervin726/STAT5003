@@ -1,0 +1,435 @@
+---
+title: "Project Planning and Exploratory Data Analysis"
+subtitle: "Classifying Annual Enrolment Size in NSW Government Schools"
+author: "STAT5003"
+date: last-modified
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    theme: cosmo
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+## Executive summary
+
+This project uses two official datasets published by the NSW Department of Education: school-level student headcounts for 2004–2025 and the NSW public schools master dataset. The files are linked using the unique school identifier `School_code`, and the wide annual enrolment table is transformed into a school-year dataset.
+
+The task is to classify a school's annual enrolment as **Small (fewer than 100 students)**, **Medium (100–399 students)**, or **Large (at least 400 students)** using year, level of schooling, geography, remoteness, and available school-level socioeconomic information. Such classifications could support an initial assessment of schools that may require different facilities, staffing, transport, or service models, but they cannot replace formal resource planning.
+
+The integrated data contain **50,336 school-year observations**. Enrolment is available for 47,828 observations, distributed across approximately 12,607 Small, 18,185 Medium, and 17,036 Large records. The dataset clearly satisfies four assignment criteria: **Large, Messy, Integrated, and Multi-class**. It is not a built-in R, lecture, or workshop dataset; it was not obtained from Kaggle; and its subject is not among the prohibited topics.
+
+## 1. Framing and research question
+
+### 1.1 Specific research question
+
+> How accurately can the annual enrolment size of a NSW government school be classified as Small, Medium, or Large using year, level of schooling, geography, remoteness, and available school-level socioeconomic information?
+
+This is a predictive and planning question, not a causal one. The analysis cannot establish that remoteness, socioeconomic composition, or another school attribute causes enrolment to increase or decrease.
+
+### 1.2 Motivation and stakeholders
+
+Potential stakeholders include the NSW Department of Education, school leaders, local communities, infrastructure and transport planners, students, and families. A consistent school-size classification may help stakeholders:
+
+- examine the long-run distribution and movement of schools between size groups;
+- support preliminary planning for facilities, staffing, student support, and transport;
+- investigate whether small schools are disproportionately located in remote areas or particular schooling levels;
+- identify linkage and data-quality problems between current school records and historical enrolment data.
+
+Predictions must not automatically determine school closures, mergers, funding reductions, or staffing. Enrolment size is only one element of need. Decisions also require student needs, population forecasts, travel distance, curriculum breadth, community consultation, and professional judgement.
+
+## 2. Data sources and provenance
+
+### 2.1 Historical school headcounts
+
+The [NSW government school enrolments by head count](https://data.nsw.gov.au/data/dataset/nsw-education-nsw-government-school-enrolments-by-head-count) dataset is published by the NSW Department of Education. It reports headcounts for individual NSW government schools from 2004 onward. The counts come from the National Schools Statistics Collection (NSSC), conducted on the first Friday in August each year. The publisher states that values are suppressed when a school has five or fewer students, while a null value indicates that no NSSC enrolment was collected for that school-year.
+
+Local file: `headcount.csv`\
+SHA-256:
+
+``` text
+CEE66DE166698DBD6C54CB9A50F53913BECB926062C4F42A359B03735626F4BE
+```
+
+### 2.2 NSW public schools master data
+
+The [Master dataset: NSW government school locations and student enrolment numbers](https://data.nsw.gov.au/data/en/dataset/nsw-education-nsw-public-schools-master-dataset) contains school location, type, coordinates, current enrolment, electorate, remoteness, ICSEA, FOEI, and related administrative information. Some sensitive percentages are represented by `np` when student counts are five or fewer. ICSEA is unavailable for some small schools, schools for specific purposes, and senior secondary schools.
+
+Local file: `master_dataset.csv`\
+SHA-256:
+
+``` text
+ADC979FC553DAD794EDAD3FD1AAB0BA2D5727C19D72A4D7F5377227669D87FBE
+```
+
+Both files were downloaded from Data.NSW on 3 September 2026 and are made available under a Creative Commons Attribution licence. Open datasets are updated over time, so reproducibility should rely on the supplied local files and checksums rather than assuming that a future download is identical.
+
+## 3. Data import and integration
+
+```{r}
+#| label: setup
+#| include: false
+
+required_packages <- c("dplyr", "tidyr", "ggplot2", "scales", "knitr")
+missing_packages <- required_packages[
+  !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)
+]
+if (length(missing_packages) > 0) {
+  stop("Install these packages before rendering: ",
+       paste(missing_packages, collapse = ", "))
+}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(knitr)
+theme_set(theme_minimal(base_size = 12))
+```
+
+```{r}
+#| label: import-data
+
+enrolment_raw <- read.csv(
+  "headcount.csv",
+  check.names = FALSE,
+  stringsAsFactors = FALSE,
+  na.strings = c("", "NA", "np", "NP")
+)
+
+school_raw <- read.csv(
+  "master_dataset.csv",
+  check.names = FALSE,
+  stringsAsFactors = FALSE,
+  na.strings = c("", "NA", "np", "NP")
+)
+
+enrolment_wide <- enrolment_raw |>
+  rename(
+    School_code = `School Code`,
+    School_name_enrolment = `School Name`
+  )
+
+enrolment_long <- enrolment_wide |>
+  pivot_longer(
+    cols = starts_with("HC_"),
+    names_to = "year",
+    values_to = "headcount"
+  ) |>
+  mutate(
+    year = as.integer(sub("HC_", "", year)),
+    headcount = suppressWarnings(as.numeric(headcount))
+  )
+```
+
+### 3.1 Linkage process
+
+The linkage key is the school code contained in both source files. Its original name is `School_code` in the master data and `School Code` in the historical headcount data. The code standardises the name and uses the long historical enrolment table as the left-hand table in a `left_join()`.
+
+```{r}
+#| label: linkage
+
+stopifnot(!anyDuplicated(school_raw$School_code))
+
+school_year <- enrolment_long |>
+  left_join(
+    school_raw,
+    by = "School_code",
+    relationship = "many-to-one"
+  ) |>
+  mutate(
+    linked_to_master = !is.na(School_name),
+    size_class = cut(
+      headcount,
+      breaks = c(-Inf, 99, 399, Inf),
+      labels = c("Small (<100)", "Medium (100–399)", "Large (400+)"),
+      ordered_result = TRUE
+    )
+  )
+```
+
+Declaring `relationship = "many-to-one"` specifies that many school-year records may match exactly one master record. The join fails if duplicate school codes in the master data would silently multiply rows.
+
+```{r}
+#| label: linkage-audit
+
+linkage_summary <- tibble(
+  measure = c(
+    "Schools in historical headcounts", "Schools in master data",
+    "School-year observations", "Matched observations",
+    "Unmatched observations", "Match rate",
+    "Total headcount before linkage", "Total headcount after linkage"
+  ),
+  value = c(
+    n_distinct(enrolment_long$School_code),
+    n_distinct(school_raw$School_code),
+    nrow(school_year),
+    sum(school_year$linked_to_master),
+    sum(!school_year$linked_to_master),
+    percent(mean(school_year$linked_to_master), accuracy = 0.1),
+    sum(enrolment_long$headcount, na.rm = TRUE),
+    sum(school_year$headcount, na.rm = TRUE)
+  )
+)
+
+kable(linkage_summary, align = c("l", "r"))
+```
+
+The total headcount must remain unchanged by the linkage. Unmatched records may represent schools that closed, changed codes, or no longer appear in the current master data. They should be investigated by year and headcount rather than silently discarded.
+
+## 4. Alignment with the assignment requirements
+
+| Requirement | Met? | Reproducible evidence |
+|:---|:--:|:---|
+| Large | Yes | The defensible school-year unit produces 50,336 rows, of which 47,828 have a valid outcome |
+| Messy | Yes | Historical headcounts contain suppressed and null values; master data include `np`, structural missingness, and unmatched historical schools |
+| Integrated | Yes | Two independent official CSV files are linked many-to-one by `School_code`; match rates and pre/post-linkage totals are audited |
+| Multi-class | Yes | Annual enrolment is classified as Small, Medium, or Large |
+| Complex | Not claimed | The integrated data do not exceed the explicit 100-feature threshold |
+
+The project therefore meets four requirements without relying on the Complex criterion.
+
+## 5. Exploratory data analysis
+
+### 5.1 Dimensions and variable types
+
+```{r}
+#| label: dimensions-types
+
+dimension_summary <- tibble(
+  measure = c(
+    "Rows in raw headcount data", "Columns in raw headcount data",
+    "Rows in raw master data", "Columns in raw master data",
+    "Rows after long transformation and linkage", "Integrated columns"
+  ),
+  value = c(
+    nrow(enrolment_raw), ncol(enrolment_raw),
+    nrow(school_raw), ncol(school_raw),
+    nrow(school_year), ncol(school_year)
+  )
+)
+
+kable(dimension_summary, align = c("l", "r"))
+
+type_summary <- tibble(
+  variable = names(school_year),
+  storage_type = vapply(
+    school_year,
+    function(x) paste(class(x), collapse = "/"),
+    character(1)
+  )
+) |>
+  count(storage_type, name = "variable_count", sort = TRUE)
+
+kable(type_summary, col.names = c("R storage type", "Variables"))
+```
+
+Many master-data fields are imported as character values, but their statistical roles differ. Level of schooling and remoteness are categorical, coordinates and headcounts are numeric, year is temporal, and names, phone numbers, and email addresses are identifiers or administrative fields. Variables must be converted according to meaning rather than storage type alone.
+
+### 5.2 Missingness patterns
+
+The following analyses show both variable-level missingness and the co-occurrence of missing values in a sample of rows. `np` and empty strings were converted to `NA` during import, so the audit includes privacy suppression as well as native nulls.
+
+```{r}
+#| label: missing-summary
+
+missing_summary <- tibble(
+  variable = names(school_year),
+  missing_n = vapply(school_year, function(x) sum(is.na(x)), integer(1)),
+  missing_proportion = vapply(
+    school_year,
+    function(x) mean(is.na(x)),
+    numeric(1)
+  )
+) |>
+  arrange(desc(missing_proportion))
+
+kable(
+  missing_summary |>
+    slice_head(n = 20) |>
+    mutate(missing_proportion = percent(missing_proportion, accuracy = 0.1)),
+  col.names = c("Variable", "Missing values", "Missing proportion")
+)
+```
+
+```{r}
+#| label: missing-bar-plot
+#| fig-cap: "The 20 variables with the largest missing proportions. Suppressed `np` values and empty strings were converted to NA during import."
+
+missing_summary |>
+  slice_head(n = 20) |>
+  ggplot(aes(x = reorder(variable, missing_proportion),
+             y = missing_proportion)) +
+  geom_col(fill = "#2C7FB8") +
+  coord_flip() +
+  scale_y_continuous(labels = percent) +
+  labs(title = "Missingness in the integrated data", x = NULL,
+       y = "Missing proportion")
+```
+
+```{r}
+#| label: missing-pattern-plot
+#| fig-cap: "Co-occurrence of missing values for 15 variables in a sample of 1,000 school-year observations."
+
+set.seed(5003)
+pattern_variables <- missing_summary |>
+  filter(missing_proportion > 0) |>
+  slice_head(n = 15) |>
+  pull(variable)
+
+missing_pattern <- school_year |>
+  slice_sample(n = min(1000, nrow(school_year))) |>
+  select(all_of(pattern_variables)) |>
+  mutate(across(everything(), is.na)) |>
+  mutate(sample_row = row_number()) |>
+  pivot_longer(-sample_row, names_to = "variable", values_to = "missing") |>
+  mutate(status = if_else(missing, "Missing", "Observed"))
+
+ggplot(
+  missing_pattern,
+  aes(x = sample_row,
+      y = factor(variable, levels = rev(pattern_variables)),
+      fill = status)
+) +
+  geom_raster() +
+  scale_fill_manual(values = c("Missing" = "#D73027", "Observed" = "#E8E8E8")) +
+  labs(title = "Missing values are not distributed uniformly",
+       x = "Sampled observation", y = NULL, fill = NULL) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+```
+
+Missingness reflects at least three mechanisms: privacy suppression for very small counts, absence of an NSSC collection for a school-year, and non-publication of indicators for particular school types. These mechanisms should not be treated as ordinary random missingness. Rows with missing `headcount` cannot receive an outcome class and should be excluded from supervised modelling, while their count and annual distribution remain part of the data-quality findings.
+
+### 5.3 Multi-class outcome and balance
+
+The Small, Medium, and Large thresholds are declared before modelling rather than chosen retrospectively from sample quantiles. The group should confirm that the thresholds are substantively useful and test whether reasonable alternative cut-offs change the conclusions.
+
+```{r}
+#| label: class-distribution
+
+class_distribution <- school_year |>
+  filter(!is.na(size_class)) |>
+  count(size_class, name = "observations") |>
+  mutate(proportion = observations / sum(observations))
+
+kable(
+  class_distribution |>
+    mutate(proportion = percent(proportion, accuracy = 0.1)),
+  col.names = c("Annual enrolment size", "Observations", "Proportion")
+)
+```
+
+```{r}
+#| label: class-plot
+#| fig-cap: "Distribution of the three outcome classes across 47,828 valid school-year observations."
+
+ggplot(class_distribution,
+       aes(x = size_class, y = observations, fill = size_class)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = percent(proportion, accuracy = 0.1)),
+            vjust = -0.4, size = 3.5) +
+  scale_y_continuous(labels = comma,
+                     expand = expansion(mult = c(0, 0.1))) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "The three school-size classes are reasonably balanced",
+       x = NULL, y = "School-year observations")
+```
+
+The classes are sufficiently balanced for standard classifiers, but class-specific metrics remain necessary. Small remote schools may have few students while still providing essential educational access.
+
+### 5.4 Change over time
+
+```{r}
+#| label: trend-plot
+#| fig-cap: "Number of school records in each enrolment-size class from 2004 to 2025."
+
+school_year |>
+  filter(!is.na(size_class)) |>
+  count(year, size_class) |>
+  ggplot(aes(year, n, colour = size_class)) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 1.5) +
+  scale_x_continuous(breaks = seq(2004, 2025, by = 2)) +
+  scale_y_continuous(labels = comma) +
+  labs(title = "School-size composition changes over time",
+       x = "Year", y = "Schools", colour = "Enrolment size")
+```
+
+Observations from the same school across years are strongly dependent. The 50,336 rows cannot be treated as independent. A random row split would put the same school in training and testing, allowing the model to memorise school characteristics and overstate generalisation.
+
+## 6. Data preparation and leakage audit
+
+### 6.1 Variables to exclude or treat cautiously
+
+- `latest_year_enrolment_FTE` closely represents the outcome and would leak information when predicting historical or current size; it must be excluded.
+- School name, address, phone, email, website, fax, and `AgeID` are identifiers and should not be predictors.
+- `School_subtype` may nearly encode schooling level or size and requires an explicit leakage audit.
+- `Date_extracted` is a publication-management field, not a stable school attribute.
+- Current master-data attributes are joined to every historical year. Attributes that change over time cannot be assumed to represent their historical values.
+
+### 6.2 Proposed analysis data
+
+1.  Retain school-year records with non-missing `headcount` and a successful master-data linkage.
+2.  Convert level of schooling, gender, remoteness, region, selectivity, and similar variables to factors.
+3.  Safely parse `Indigenous_pct`, `LBOTE_pct`, `ICSEA_value`, `FOEI_Value`, latitude, and longitude as numeric and audit failed conversions.
+4.  Remove current enrolment, names, contact details, and other direct or indirect leakage variables.
+5.  Choose defensible geographic levels rather than allowing complete addresses to identify individual schools.
+6.  Estimate imputation, rare-category pooling, and scaling parameters on training data only.
+
+## 7. Validation and modelling plan
+
+### 7.1 Data splitting
+
+The primary evaluation should split by `School_code`, ensuring that a school appears in either training or testing, never both. This evaluates generalisation to unseen schools. A suitable design is:
+
+- an 80/20 grouped train-test split by school;
+- grouped cross-validation by school within training data;
+- approximate stratification by `size_class` to preserve outcome balance.
+
+A secondary analysis could train on 2004–2023 and test on 2024–2025. That design evaluates future years for largely known schools rather than unseen schools. The two estimands should be labelled separately.
+
+### 7.2 Candidate models
+
+- majority-class classifier as the minimum baseline;
+- multinomial logistic regression as an interpretable baseline;
+- regularised multinomial logistic regression for correlated predictors;
+- random forest or gradient boosting for non-linearity and interactions.
+
+### 7.3 Evaluation metrics
+
+- accuracy;
+- macro F1 and balanced accuracy;
+- per-class precision, recall, and F1;
+- a three-class confusion matrix;
+- error rates by remoteness, schooling level, and region.
+
+Because Small, Medium, and Large are ordered, weighted Cohen's kappa or mean absolute class error can supplement ordinary multi-class measures and distinguish adjacent from two-level errors.
+
+## 8. Limitations and ethical considerations
+
+### 8.1 Limitations
+
+- The data cover NSW government schools only, not Catholic or independent schools.
+- Historical headcounts and the current master data have different reference times.
+- Small counts are suppressed, so missingness is not random.
+- Closed or renamed schools may not link to the current master file.
+- The size thresholds are analytical definitions, not official Department classifications.
+- Enrolment alone does not measure educational quality, resource need, or community value.
+
+### 8.2 Ethics and fairness
+
+Small schools often serve remote communities, students with particular needs, or specialised educational stages. Interpreting Small as inefficient would be misleading and potentially harmful. Predictions must not automatically trigger closure, consolidation, or resource reduction. Official privacy suppression must be respected; the analysis should never attempt to infer hidden small counts. Subgroup performance should test whether the model systematically misclassifies remote schools, schools for specific purposes, or disadvantaged communities.
+
+## 9. Overall recommendation
+
+The NSW government school data are a strong and low-risk Australian candidate. They avoid every prohibited topic, demonstrate **Integration** through a reproducible link between two official sources, satisfy **Large** after conversion to the defensible school-year unit, contain privacy suppression and structural missingness that satisfy **Messy**, and support a balanced three-class outcome for **Multi-class**. The main statistical challenges—repeated school observations, non-random missingness, temporal mismatch between historical and current attributes, and target leakage from current enrolment—naturally support substantive EDA and informed modelling decisions.
+
+## References
+
+NSW Department of Education. (2026). *NSW government school enrolments by head count (2004–2025)*. Data.NSW. <https://data.nsw.gov.au/data/dataset/nsw-education-nsw-government-school-enrolments-by-head-count>
+
+NSW Department of Education. (2026). *Master dataset: NSW government school locations and student enrolment numbers*. Data.NSW. <https://data.nsw.gov.au/data/en/dataset/nsw-education-nsw-public-schools-master-dataset>

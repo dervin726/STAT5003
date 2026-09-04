@@ -1,0 +1,1472 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="zh-Hans" xml:lang="zh-Hans"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="STAT5003">
+
+<title>项目规划与探索性数据分析</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="har_assignment_analysis_zh_files/libs/clipboard/clipboard.min.js"></script>
+<script src="har_assignment_analysis_zh_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="har_assignment_analysis_zh_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="har_assignment_analysis_zh_files/libs/quarto-html/popper.min.js"></script>
+<script src="har_assignment_analysis_zh_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="har_assignment_analysis_zh_files/libs/quarto-html/anchor.min.js"></script>
+<link href="har_assignment_analysis_zh_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="har_assignment_analysis_zh_files/libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="har_assignment_analysis_zh_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="har_assignment_analysis_zh_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="har_assignment_analysis_zh_files/libs/bootstrap/bootstrap-8ffd5f67044e5306d9846f29df41dda5.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">目录</h2>
+   
+  <ul>
+  <li><a href="#研究问题与数据集选择" id="toc-研究问题与数据集选择" class="nav-link active" data-scroll-target="#研究问题与数据集选择"><span class="header-section-number">1</span> 研究问题与数据集选择</a>
+  <ul class="collapse">
+  <li><a href="#现实分类任务" id="toc-现实分类任务" class="nav-link" data-scroll-target="#现实分类任务"><span class="header-section-number">1.1</span> 现实分类任务</a></li>
+  <li><a href="#研究问题" id="toc-研究问题" class="nav-link" data-scroll-target="#研究问题"><span class="header-section-number">1.2</span> 研究问题</a></li>
+  <li><a href="#研究意义与利益相关者" id="toc-研究意义与利益相关者" class="nav-link" data-scroll-target="#研究意义与利益相关者"><span class="header-section-number">1.3</span> 研究意义与利益相关者</a></li>
+  </ul></li>
+  <li><a href="#数据来源与可追溯性" id="toc-数据来源与可追溯性" class="nav-link" data-scroll-target="#数据来源与可追溯性"><span class="header-section-number">2</span> 数据来源与可追溯性</a></li>
+  <li><a href="#数据读取与完整性检查" id="toc-数据读取与完整性检查" class="nav-link" data-scroll-target="#数据读取与完整性检查"><span class="header-section-number">3</span> 数据读取与完整性检查</a></li>
+  <li><a href="#作业要求匹配度" id="toc-作业要求匹配度" class="nav-link" data-scroll-target="#作业要求匹配度"><span class="header-section-number">4</span> 作业要求匹配度</a>
+  <ul class="collapse">
+  <li><a href="#数据规模与类别平衡" id="toc-数据规模与类别平衡" class="nav-link" data-scroll-target="#数据规模与类别平衡"><span class="header-section-number">4.1</span> 数据规模与类别平衡</a></li>
+  <li><a href="#高维度与变量冗余" id="toc-高维度与变量冗余" class="nav-link" data-scroll-target="#高维度与变量冗余"><span class="header-section-number">4.2</span> 高维度与变量冗余</a></li>
+  <li><a href="#活动结构的低维可视化" id="toc-活动结构的低维可视化" class="nav-link" data-scroll-target="#活动结构的低维可视化"><span class="header-section-number">4.3</span> 活动结构的低维可视化</a></li>
+  </ul></li>
+  <li><a href="#数据准备计划" id="toc-数据准备计划" class="nav-link" data-scroll-target="#数据准备计划"><span class="header-section-number">5</span> 数据准备计划</a></li>
+  <li><a href="#eda-对建模方案的启示" id="toc-eda-对建模方案的启示" class="nav-link" data-scroll-target="#eda-对建模方案的启示"><span class="header-section-number">6</span> EDA 对建模方案的启示</a></li>
+  <li><a href="#优势局限与伦理问题" id="toc-优势局限与伦理问题" class="nav-link" data-scroll-target="#优势局限与伦理问题"><span class="header-section-number">7</span> 优势、局限与伦理问题</a>
+  <ul class="collapse">
+  <li><a href="#优势" id="toc-优势" class="nav-link" data-scroll-target="#优势"><span class="header-section-number">7.1</span> 优势</a></li>
+  <li><a href="#局限" id="toc-局限" class="nav-link" data-scroll-target="#局限"><span class="header-section-number">7.2</span> 局限</a></li>
+  <li><a href="#伦理考虑" id="toc-伦理考虑" class="nav-link" data-scroll-target="#伦理考虑"><span class="header-section-number">7.3</span> 伦理考虑</a></li>
+  </ul></li>
+  <li><a href="#总体建议" id="toc-总体建议" class="nav-link" data-scroll-target="#总体建议"><span class="header-section-number">8</span> 总体建议</a></li>
+  <li><a href="#参考文献" id="toc-参考文献" class="nav-link" data-scroll-target="#参考文献"><span class="header-section-number">9</span> 参考文献</a></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<div class="quarto-title-block"><div><h1 class="title">项目规划与探索性数据分析</h1><button type="button" class="btn code-tools-button dropdown-toggle" id="quarto-code-tools-menu" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi"></i> 代码</button><ul class="dropdown-menu dropdown-menu-end" aria-labelelledby="quarto-code-tools-menu"><li><a id="quarto-show-all-code" class="dropdown-item" href="javascript:void(0)" role="button">显示所有代码</a></li><li><a id="quarto-hide-all-code" class="dropdown-item" href="javascript:void(0)" role="button">隐藏所有代码</a></li><li><hr class="dropdown-divider"></li><li><a id="quarto-view-source" class="dropdown-item" href="javascript:void(0)" role="button">查看源代码</a></li></ul></div></div>
+<p class="subtitle lead">利用智能手机传感器识别日常活动</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">作者</div>
+    <div class="quarto-title-meta-contents">
+             <p>STAT5003 </p>
+          </div>
+  </div>
+    
+    <div>
+    <div class="quarto-title-meta-heading">发布于</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">2026年9月3日</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="研究问题与数据集选择" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> 研究问题与数据集选择</h1>
+<section id="现实分类任务" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="现实分类任务"><span class="header-section-number">1.1</span> 现实分类任务</h2>
+<p>本项目研究能否根据腰部智能手机的加速度计和陀螺仪测量数据，对一个人正在进行的活动进行分类。目标变量包含六个类别：<strong>步行、上楼、下楼、坐姿、站立和躺卧</strong>。这些类别不存在完整的自然顺序，因此这是一个无序多分类问题。</p>
+</section>
+<section id="研究问题" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="研究问题"><span class="header-section-number">1.2</span> 研究问题</h2>
+<blockquote class="blockquote">
+<p>对于未参与模型训练的新受试者，利用智能手机传感器的时域和频域特征，能够以多高的准确度识别六种常见日常活动？</p>
+</blockquote>
+<p>“未参与训练的新受试者”是研究问题的重要组成部分。同一参与者会产生多个时间窗口。如果随机拆分数据行，同一个人的运动模式可能同时进入训练集和测试集，从而高估模型表现。数据发布者提供的按参与者划分的数据集能够更真实地评价模型对新用户的泛化能力。</p>
+</section>
+<section id="研究意义与利益相关者" class="level2" data-number="1.3">
+<h2 data-number="1.3" class="anchored" data-anchor-id="研究意义与利益相关者"><span class="header-section-number">1.3</span> 研究意义与利益相关者</h2>
+<p>人体活动识别可以用于健身记录、情境感知移动应用、工作场所安全系统，以及在经过临床验证后用于行动能力或康复监测。利益相关者包括设备开发者、研究人员、临床人员、服务机构以及其活动被测量的用户。</p>
+<p>本数据集属于受控实验环境下的基准数据，不能直接作为临床诊断工具。错误分类可能产生误导性的健康或安全判断，而持续采集运动数据还涉及隐私与监控风险。实际部署需要取得知情同意、遵循数据最小化原则、安全存储数据、在目标人群中重新验证，并为用户提供明确的退出机制。</p>
+</section>
+</section>
+<section id="数据来源与可追溯性" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> 数据来源与可追溯性</h1>
+<p><strong>Human Activity Recognition Using Smartphones</strong> 数据集由 <a href="https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones">UCI Machine Learning Repository</a> 发布。实验招募了 30 名年龄为 19–48 岁的志愿者。参与者将 Samsung Galaxy S II 手机佩戴在腰部并完成六种活动。手机的加速度计和陀螺仪以 50 Hz 频率采集数据。研究者将信号划分为长度 2.56 秒、重叠率 50% 的窗口，并生成 561 个时域和频域特征。</p>
+<p>本地文件 <code>UCI_HAR_Dataset.zip</code> 直接下载自 UCI 官方分发地址，其 SHA-256 校验值为：</p>
+<pre class="text"><code>C00B803081A5C797CD5E4B83700A9810B38D53D9D84E01917E090E1FDBC81031</code></pre>
+<p>该数据最初由 Anguita 等人（2013）介绍。UCI 已按照参与者将数据划分为训练集和测试集：约 70% 的参与者用于训练，其余参与者用于测试。本地文件包含 7,352 个训练窗口和 2,947 个测试窗口。</p>
+<p>该数据来自 UCI 而非 Kaggle，不是 R 内置数据集，也不涉及作业禁止的主题。</p>
+</section>
+<section id="数据读取与完整性检查" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> 数据读取与完整性检查</h1>
+<p>UCI 下载文件中还包含一个内层 ZIP。以下代码将两层压缩包解压到 R 会话的临时目录，读取特征名称和活动标签，并在保留官方训练／测试角色的前提下合并数据。</p>
+<div class="cell">
+<details class="code-fold">
+<summary>代码</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>data_zip <span class="ot">&lt;-</span> <span class="st">"UCI_HAR_Dataset.zip"</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">file.exists</span>(data_zip))</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>extract_root <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">tempdir</span>(), <span class="st">"uci_har_240_zh"</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(extract_root, <span class="at">recursive =</span> <span class="cn">TRUE</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="fu">unzip</span>(data_zip, <span class="at">exdir =</span> extract_root, <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>inner_zip <span class="ot">&lt;-</span> <span class="fu">list.files</span>(</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>  extract_root,</span>
+<span id="cb2-10"><a href="#cb2-10" aria-hidden="true" tabindex="-1"></a>  <span class="at">pattern =</span> <span class="st">"UCI HAR Dataset[.]zip$"</span>,</span>
+<span id="cb2-11"><a href="#cb2-11" aria-hidden="true" tabindex="-1"></a>  <span class="at">full.names =</span> <span class="cn">TRUE</span></span>
+<span id="cb2-12"><a href="#cb2-12" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-13"><a href="#cb2-13" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">length</span>(inner_zip) <span class="sc">!=</span> <span class="dv">1</span>) <span class="fu">stop</span>(<span class="st">"内层数据压缩包数量不等于 1。"</span>)</span>
+<span id="cb2-14"><a href="#cb2-14" aria-hidden="true" tabindex="-1"></a><span class="fu">unzip</span>(inner_zip, <span class="at">exdir =</span> extract_root, <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-15"><a href="#cb2-15" aria-hidden="true" tabindex="-1"></a>data_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(extract_root, <span class="st">"UCI HAR Dataset"</span>)</span>
+<span id="cb2-16"><a href="#cb2-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-17"><a href="#cb2-17" aria-hidden="true" tabindex="-1"></a>feature_key <span class="ot">&lt;-</span> <span class="fu">read.table</span>(</span>
+<span id="cb2-18"><a href="#cb2-18" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(data_dir, <span class="st">"features.txt"</span>),</span>
+<span id="cb2-19"><a href="#cb2-19" aria-hidden="true" tabindex="-1"></a>  <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"feature_id"</span>, <span class="st">"feature_name"</span>),</span>
+<span id="cb2-20"><a href="#cb2-20" aria-hidden="true" tabindex="-1"></a>  <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
+<span id="cb2-21"><a href="#cb2-21" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-22"><a href="#cb2-22" aria-hidden="true" tabindex="-1"></a>activity_key <span class="ot">&lt;-</span> <span class="fu">read.table</span>(</span>
+<span id="cb2-23"><a href="#cb2-23" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(data_dir, <span class="st">"activity_labels.txt"</span>),</span>
+<span id="cb2-24"><a href="#cb2-24" aria-hidden="true" tabindex="-1"></a>  <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"activity_id"</span>, <span class="st">"activity"</span>),</span>
+<span id="cb2-25"><a href="#cb2-25" aria-hidden="true" tabindex="-1"></a>  <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
+<span id="cb2-26"><a href="#cb2-26" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-27"><a href="#cb2-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-28"><a href="#cb2-28" aria-hidden="true" tabindex="-1"></a><span class="co"># 官方特征元数据中有 84 个重复名称。</span></span>
+<span id="cb2-29"><a href="#cb2-29" aria-hidden="true" tabindex="-1"></a><span class="co"># make.unique() 保留全部 561 列，同时生成可由 R 安全使用的唯一名称。</span></span>
+<span id="cb2-30"><a href="#cb2-30" aria-hidden="true" tabindex="-1"></a>feature_names <span class="ot">&lt;-</span> <span class="fu">make.unique</span>(feature_key<span class="sc">$</span>feature_name, <span class="at">sep =</span> <span class="st">"__duplicate_"</span>)</span>
+<span id="cb2-31"><a href="#cb2-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-32"><a href="#cb2-32" aria-hidden="true" tabindex="-1"></a>read_partition <span class="ot">&lt;-</span> <span class="cf">function</span>(partition) {</span>
+<span id="cb2-33"><a href="#cb2-33" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="fu">file.path</span>(data_dir, partition, <span class="fu">paste0</span>(<span class="st">"X_"</span>, partition, <span class="st">".txt"</span>)))</span>
+<span id="cb2-34"><a href="#cb2-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(x) <span class="ot">&lt;-</span> feature_names</span>
+<span id="cb2-35"><a href="#cb2-35" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> <span class="fu">scan</span>(<span class="fu">file.path</span>(data_dir, partition, <span class="fu">paste0</span>(<span class="st">"y_"</span>, partition, <span class="st">".txt"</span>)),</span>
+<span id="cb2-36"><a href="#cb2-36" aria-hidden="true" tabindex="-1"></a>            <span class="at">quiet =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb2-37"><a href="#cb2-37" aria-hidden="true" tabindex="-1"></a>  subject <span class="ot">&lt;-</span> <span class="fu">scan</span>(</span>
+<span id="cb2-38"><a href="#cb2-38" aria-hidden="true" tabindex="-1"></a>    <span class="fu">file.path</span>(data_dir, partition, <span class="fu">paste0</span>(<span class="st">"subject_"</span>, partition, <span class="st">".txt"</span>)),</span>
+<span id="cb2-39"><a href="#cb2-39" aria-hidden="true" tabindex="-1"></a>    <span class="at">quiet =</span> <span class="cn">TRUE</span></span>
+<span id="cb2-40"><a href="#cb2-40" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb2-41"><a href="#cb2-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-42"><a href="#cb2-42" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_cols</span>(</span>
+<span id="cb2-43"><a href="#cb2-43" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(<span class="at">partition =</span> partition, <span class="at">subject =</span> subject, <span class="at">activity_id =</span> y),</span>
+<span id="cb2-44"><a href="#cb2-44" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>(x, <span class="at">.name_repair =</span> <span class="st">"minimal"</span>)</span>
+<span id="cb2-45"><a href="#cb2-45" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb2-46"><a href="#cb2-46" aria-hidden="true" tabindex="-1"></a>    <span class="fu">left_join</span>(activity_key, <span class="at">by =</span> <span class="st">"activity_id"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb2-47"><a href="#cb2-47" aria-hidden="true" tabindex="-1"></a>    <span class="fu">relocate</span>(activity, <span class="at">.after =</span> activity_id)</span>
+<span id="cb2-48"><a href="#cb2-48" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb2-49"><a href="#cb2-49" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-50"><a href="#cb2-50" aria-hidden="true" tabindex="-1"></a>har <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(<span class="fu">read_partition</span>(<span class="st">"train"</span>), <span class="fu">read_partition</span>(<span class="st">"test"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb2-51"><a href="#cb2-51" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb2-52"><a href="#cb2-52" aria-hidden="true" tabindex="-1"></a>    <span class="at">partition =</span> <span class="fu">factor</span>(partition, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"train"</span>, <span class="st">"test"</span>)),</span>
+<span id="cb2-53"><a href="#cb2-53" aria-hidden="true" tabindex="-1"></a>    <span class="at">activity =</span> <span class="fu">factor</span>(activity, <span class="at">levels =</span> activity_key<span class="sc">$</span>activity)</span>
+<span id="cb2-54"><a href="#cb2-54" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb2-55"><a href="#cb2-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb2-56"><a href="#cb2-56" aria-hidden="true" tabindex="-1"></a>predictor_names <span class="ot">&lt;-</span> feature_names</span></code></pre></div><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>代码</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>integrity_summary <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  检查项目 <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="st">"观测数"</span>, <span class="st">"传感器特征数"</span>, <span class="st">"分析数据总列数"</span>, <span class="st">"参与者人数"</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="st">"预测变量缺失值数"</span>, <span class="st">"预测变量非有限值数"</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="st">"原始重复特征名称数"</span>, <span class="st">"训练集与测试集共有的参与者数"</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>  数值 <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">nrow</span>(har), <span class="fu">length</span>(predictor_names), <span class="fu">ncol</span>(har), <span class="fu">n_distinct</span>(har<span class="sc">$</span>subject),</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(<span class="fu">is.na</span>(har[predictor_names])),</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(<span class="sc">!</span><span class="fu">is.finite</span>(<span class="fu">as.matrix</span>(har[predictor_names]))),</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(<span class="fu">duplicated</span>(feature_key<span class="sc">$</span>feature_name)),</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">length</span>(<span class="fu">intersect</span>(</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a>      <span class="fu">unique</span>(har<span class="sc">$</span>subject[har<span class="sc">$</span>partition <span class="sc">==</span> <span class="st">"train"</span>]),</span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a>      <span class="fu">unique</span>(har<span class="sc">$</span>subject[har<span class="sc">$</span>partition <span class="sc">==</span> <span class="st">"test"</span>])</span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>    ))</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(integrity_summary, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"r"</span>))</span></code></pre></div><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">检查项目</th>
+<th style="text-align: right;">数值</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">观测数</td>
+<td style="text-align: right;">10299</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">传感器特征数</td>
+<td style="text-align: right;">561</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">分析数据总列数</td>
+<td style="text-align: right;">565</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">参与者人数</td>
+<td style="text-align: right;">30</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">预测变量缺失值数</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">预测变量非有限值数</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">原始重复特征名称数</td>
+<td style="text-align: right;">84</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">训练集与测试集共有的参与者数</td>
+<td style="text-align: right;">0</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>完整性检查应得到 10,299 条观测、561 个传感器特征、30 名参与者、零个缺失或非有限预测值、84 个重复的原始特征名称，以及零个同时出现在训练集和测试集的参与者。重复名称是元数据问题，而不是重复的数据列；代码通过确定性的方式修复名称并保留所有特征。</p>
+</section>
+<section id="作业要求匹配度" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> 作业要求匹配度</h1>
+<p>该数据集无需对“Messy”或“Integrated”作有争议的解释，便能明确满足三项作业要求。</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th style="text-align: left;">要求</th>
+<th style="text-align: left;">证据</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">Large</td>
+<td style="text-align: left;">10,299 条观测，刚刚超过 10,000 条的门槛</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">Complex</td>
+<td style="text-align: left;">561 个传感器特征，远高于 100 个变量的门槛</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">Multi-class</td>
+<td style="text-align: left;">六个无序活动类别</td>
+</tr>
+</tbody>
+</table>
+<p>它的规模明显小于 2024 BRFSS 方案（457,670 行、301 个变量），普通笔记本电脑即可较快完成分析。其核心难点是高维度和变量冗余，而不是文件大小或复杂的缺失编码。</p>
+<section id="数据规模与类别平衡" class="level2" data-number="4.1">
+<h2 data-number="4.1" class="anchored" data-anchor-id="数据规模与类别平衡"><span class="header-section-number">4.1</span> 数据规模与类别平衡</h2>
+<div class="cell">
+<details class="code-fold">
+<summary>代码</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>activity_names_zh <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>  <span class="at">WALKING =</span> <span class="st">"步行"</span>, <span class="at">WALKING_UPSTAIRS =</span> <span class="st">"上楼"</span>, <span class="at">WALKING_DOWNSTAIRS =</span> <span class="st">"下楼"</span>,</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>  <span class="at">SITTING =</span> <span class="st">"坐姿"</span>, <span class="at">STANDING =</span> <span class="st">"站立"</span>, <span class="at">LAYING =</span> <span class="st">"躺卧"</span></span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>class_distribution <span class="ot">&lt;-</span> har <span class="sc">|&gt;</span></span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(activity, <span class="at">name =</span> <span class="st">"窗口数"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    比例 <span class="ot">=</span> 窗口数 <span class="sc">/</span> <span class="fu">sum</span>(窗口数),</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    活动 <span class="ot">=</span> <span class="fu">factor</span>(activity_names_zh[<span class="fu">as.character</span>(activity)],</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>                  <span class="at">levels =</span> <span class="fu">unname</span>(activity_names_zh))</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>  class_distribution <span class="sc">|&gt;</span></span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(活动, 窗口数, 比例 <span class="ot">=</span> <span class="fu">percent</span>(比例, <span class="at">accuracy =</span> <span class="fl">0.1</span>)),</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>  <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>)</span></code></pre></div><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">活动</th>
+<th style="text-align: right;">窗口数</th>
+<th style="text-align: right;">比例</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">步行</td>
+<td style="text-align: right;">1722</td>
+<td style="text-align: right;">16.7%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">上楼</td>
+<td style="text-align: right;">1544</td>
+<td style="text-align: right;">15.0%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">下楼</td>
+<td style="text-align: right;">1406</td>
+<td style="text-align: right;">13.7%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">坐姿</td>
+<td style="text-align: right;">1777</td>
+<td style="text-align: right;">17.3%</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">站立</td>
+<td style="text-align: right;">1906</td>
+<td style="text-align: right;">18.5%</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">躺卧</td>
+<td style="text-align: right;">1944</td>
+<td style="text-align: right;">18.9%</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>代码</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(class_distribution,</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">reorder</span>(活动, 窗口数), <span class="at">y =</span> 窗口数, <span class="at">fill =</span> 活动)) <span class="sc">+</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">show.legend =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="fu">percent</span>(比例, <span class="at">accuracy =</span> <span class="fl">0.1</span>)),</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>            <span class="at">hjust =</span> <span class="sc">-</span><span class="fl">0.1</span>, <span class="at">size =</span> <span class="fl">3.5</span>) <span class="sc">+</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_flip</span>() <span class="sc">+</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">labels =</span> comma,</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>                     <span class="at">expand =</span> <span class="fu">expansion</span>(<span class="at">mult =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.12</span>))) <span class="sc">+</span></span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_brewer</span>(<span class="at">palette =</span> <span class="st">"Set2"</span>) <span class="sc">+</span></span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"六个活动类别较为平衡"</span>, <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">"时间窗口数"</span>)</span></code></pre></div><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="har_assignment_analysis_zh_files/figure-html/class-distribution-plot-1.png" class="img-fluid figure-img" width="864"></p>
+<figcaption>全部 10,299 个时间窗口中六种活动的类别分布。</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>最大类别是“躺卧”，最小类别是“下楼”，两者样本数之比小于 1.4。总体准确率具有一定解释价值，但仍应报告 Macro F1 和每类召回率，因为坐姿和站立在物理状态上较为相似，其错误率可能不同。</p>
+</section>
+<section id="高维度与变量冗余" class="level2" data-number="4.2">
+<h2 data-number="4.2" class="anchored" data-anchor-id="高维度与变量冗余"><span class="header-section-number">4.2</span> 高维度与变量冗余</h2>
+<p>561 个预测变量均为传感器窗口的数值摘要，包括均值、标准差、信号幅度面积、相关系数、自回归系数、频率成分、熵和角度变量。大量变量由相互关联的信号经过不同变换得到，因此可能存在严重的相关性和多重共线性。</p>
+<div class="cell">
+<details class="code-fold">
+<summary>代码</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>feature_sd <span class="ot">&lt;-</span> <span class="fu">vapply</span>(har[predictor_names], sd, <span class="fu">numeric</span>(<span class="dv">1</span>))</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>feature_unique <span class="ot">&lt;-</span> <span class="fu">vapply</span>(har[predictor_names], n_distinct, <span class="fu">integer</span>(<span class="dv">1</span>))</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>feature_summary <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>  统计量 <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>    <span class="st">"预测变量数"</span>, <span class="st">"零方差预测变量数"</span>, <span class="st">"近似常量预测变量数（不超过 10 个不同值）"</span>,</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a>    <span class="st">"全体预测值的最小值"</span>, <span class="st">"全体预测值的最大值"</span></span>
+<span id="cb6-8"><a href="#cb6-8" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb6-9"><a href="#cb6-9" aria-hidden="true" tabindex="-1"></a>  数值 <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb6-10"><a href="#cb6-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">length</span>(predictor_names), <span class="fu">sum</span>(feature_sd <span class="sc">==</span> <span class="dv">0</span>), <span class="fu">sum</span>(feature_unique <span class="sc">&lt;=</span> <span class="dv">10</span>),</span>
+<span id="cb6-11"><a href="#cb6-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">min</span>(<span class="fu">as.matrix</span>(har[predictor_names])), <span class="fu">max</span>(<span class="fu">as.matrix</span>(har[predictor_names]))</span>
+<span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-15"><a href="#cb6-15" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(feature_summary, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"r"</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span></code></pre></div><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">统计量</th>
+<th style="text-align: right;">数值</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">预测变量数</td>
+<td style="text-align: right;">561</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">零方差预测变量数</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">近似常量预测变量数（不超过 10 个不同值）</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">全体预测值的最小值</td>
+<td style="text-align: right;">-1</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">全体预测值的最大值</td>
+<td style="text-align: right;">1</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>代码</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>correlation_matrix <span class="ot">&lt;-</span> <span class="fu">cor</span>(<span class="fu">as.matrix</span>(har[predictor_names]))</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>upper_correlations <span class="ot">&lt;-</span> <span class="fu">abs</span>(correlation_matrix[<span class="fu">upper.tri</span>(correlation_matrix)])</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>correlation_summary <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>  相关阈值 <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"|r| &gt;= 0.80"</span>, <span class="st">"|r| &gt;= 0.90"</span>, <span class="st">"|r| &gt;= 0.95"</span>, <span class="st">"|r| &gt;= 0.99"</span>),</span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>  特征对数量 <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(upper_correlations <span class="sc">&gt;=</span> <span class="fl">0.80</span>), <span class="fu">sum</span>(upper_correlations <span class="sc">&gt;=</span> <span class="fl">0.90</span>),</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(upper_correlations <span class="sc">&gt;=</span> <span class="fl">0.95</span>), <span class="fu">sum</span>(upper_correlations <span class="sc">&gt;=</span> <span class="fl">0.99</span>)</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(correlation_summary, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"r"</span>))</span></code></pre></div><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<table class="caption-top table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: left;">相关阈值</th>
+<th style="text-align: right;">特征对数量</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">|r| &gt;= 0.80</td>
+<td style="text-align: right;">22815</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">|r| &gt;= 0.90</td>
+<td style="text-align: right;">8093</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">|r| &gt;= 0.95</td>
+<td style="text-align: right;">2219</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">|r| &gt;= 0.99</td>
+<td style="text-align: right;">207</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>相关性检查说明，直接将所有变量放入无正则化模型会导致估计不稳定且难以解释。建模时需要使用降维、正则化或经过验证的特征筛选。所有预处理参数都只能在训练数据上估计。</p>
+</section>
+<section id="活动结构的低维可视化" class="level2" data-number="4.3">
+<h2 data-number="4.3" class="anchored" data-anchor-id="活动结构的低维可视化"><span class="header-section-number">4.3</span> 活动结构的低维可视化</h2>
+<p>主成分分析（PCA）可以将 561 维特征空间压缩后进行可视化。以下 PCA 只使用训练数据拟合，再将完全相同的变换应用于未参与拟合的测试受试者。</p>
+<div class="cell">
+<details class="code-fold">
+<summary>代码</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>train_index <span class="ot">&lt;-</span> har<span class="sc">$</span>partition <span class="sc">==</span> <span class="st">"train"</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>pca_fit <span class="ot">&lt;-</span> <span class="fu">prcomp</span>(har[train_index, predictor_names], <span class="at">center =</span> <span class="cn">TRUE</span>, <span class="at">scale. =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>pca_scores <span class="ot">&lt;-</span> <span class="fu">predict</span>(pca_fit, <span class="at">newdata =</span> har[predictor_names])[, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>] <span class="sc">|&gt;</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_cols</span>(har <span class="sc">|&gt;</span> <span class="fu">select</span>(activity, partition)) <span class="sc">|&gt;</span></span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    活动 <span class="ot">=</span> <span class="fu">factor</span>(activity_names_zh[<span class="fu">as.character</span>(activity)],</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>                  <span class="at">levels =</span> <span class="fu">unname</span>(activity_names_zh)),</span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    数据分区 <span class="ot">=</span> <span class="fu">factor</span>(partition, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"train"</span>, <span class="st">"test"</span>),</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>                      <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"训练集"</span>, <span class="st">"测试集"</span>))</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>explained <span class="ot">&lt;-</span> <span class="dv">100</span> <span class="sc">*</span> pca_fit<span class="sc">$</span>sdev<span class="sc">^</span><span class="dv">2</span> <span class="sc">/</span> <span class="fu">sum</span>(pca_fit<span class="sc">$</span>sdev<span class="sc">^</span><span class="dv">2</span>)</span></code></pre></div><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+</div>
+<div class="cell">
+<details class="code-fold">
+<summary>代码</summary>
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(pca_scores, <span class="fu">aes</span>(PC1, PC2, <span class="at">colour =</span> 活动)) <span class="sc">+</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.35</span>, <span class="at">size =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>数据分区) <span class="sc">+</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_colour_brewer</span>(<span class="at">palette =</span> <span class="st">"Dark2"</span>) <span class="sc">+</span></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"前两个主成分能够区分主要活动类型"</span>,</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="fu">paste0</span>(</span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>      <span class="st">"PC1 和 PC2 分别解释标准化方差的 "</span>, <span class="fu">round</span>(explained[<span class="dv">1</span>], <span class="dv">1</span>), <span class="st">"% 和 "</span>,</span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>      <span class="fu">round</span>(explained[<span class="dv">2</span>], <span class="dv">1</span>), <span class="st">"%"</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    <span class="at">colour =</span> <span class="st">"活动"</span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a>  )</span></code></pre></div><button title="复制到剪贴板" class="code-copy-button"><i class="bi"></i></button></div>
+</details>
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="har_assignment_analysis_zh_files/figure-html/pca-plot-1.png" class="img-fluid figure-img" width="864"></p>
+<figcaption>前两个主成分。PCA 仅使用训练参与者的数据拟合。</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<p>该图只用于描述数据结构，不能作为模型性能证据。二维空间中的分离并不意味着两个主成分足以完成分类；坐姿和站立等相近活动之间出现重叠也符合预期。</p>
+</section>
+</section>
+<section id="数据准备计划" class="level1" data-number="5">
+<h1 data-number="5"><span class="header-section-number">5</span> 数据准备计划</h1>
+<ol type="1">
+<li>保留 UCI 按参与者划分的训练集和测试集，不随机重新划分单个时间窗口。</li>
+<li>在所有模型与预处理方案确定前，不使用测试集进行选择或调参。</li>
+<li>以可复现方式修复重复的特征名称，同时保留原始名称映射。</li>
+<li>中心化、标准化、PCA、相关性过滤和其他特征筛选只能使用训练数据估计。</li>
+<li>删除零方差变量；对于线性模型，考虑相关性过滤或 PCA。</li>
+<li>在训练集内部按照 <code>subject</code> 进行分组交叉验证，保证每折验证对象未出现在该折训练数据中。</li>
+<li>保留所有六个目标类别，并分别报告各类别错误率。</li>
+</ol>
+<p>由于同一参与者的相邻窗口彼此重叠，10,299 条数据并非完全独立。若忽略参与者层面的聚类结构，将夸大有效样本量。统计推断与不确定性估计必须考虑这种依赖关系。</p>
+</section>
+<section id="eda-对建模方案的启示" class="level1" data-number="6">
+<h1 data-number="6"><span class="header-section-number">6</span> EDA 对建模方案的启示</h1>
+<p>合理的基线模型是：先进行只基于训练集的标准化和降维，再拟合多项 Logistic 回归。正则化多项回归可作为更强的线性模型。随机森林或 gradient boosting 可以处理非线性关系和交互作用；支持向量机也适合该高维特征空间。</p>
+<p>模型调参应采用按参与者分组的交叉验证。最终只使用一次官方测试集进行评价。建议报告：</p>
+<ul>
+<li>总体 accuracy 和 Macro F1；</li>
+<li>balanced accuracy；</li>
+<li>每个类别的 precision 和 recall；</li>
+<li>六分类 confusion matrix；</li>
+<li>各测试参与者的分类准确率。</li>
+</ul>
+<p>最值得关注的错误可能出现在三种动态活动之间，或坐姿与站立之间。将静态姿势误判为动态活动，与混淆两种相似的步行状态具有不同含义，因此所有综合指标都应配合混淆矩阵解释。</p>
+</section>
+<section id="优势局限与伦理问题" class="level1" data-number="7">
+<h1 data-number="7"><span class="header-section-number">7</span> 优势、局限与伦理问题</h1>
+<section id="优势" class="level2" data-number="7.1">
+<h2 data-number="7.1" class="anchored" data-anchor-id="优势"><span class="header-section-number">7.1</span> 优势</h2>
+<ul>
+<li>通过客观数值证据明确满足三项作业要求。</li>
+<li>压缩后约 59 MB、共 10,299 行，普通笔记本电脑即可处理。</li>
+<li>官方参与者级划分支持严谨的模型泛化问题。</li>
+<li>类别较为平衡，活动标签通过录像辅助标注。</li>
+<li>561 个特征为降维和相关性分析提供充分空间。</li>
+</ul>
+</section>
+<section id="局限" class="level2" data-number="7.2">
+<h2 data-number="7.2" class="anchored" data-anchor-id="局限"><span class="header-section-number">7.2</span> 局限</h2>
+<ul>
+<li>只有 30 名 19–48 岁的参与者，人口多样性有限。</li>
+<li>活动是在受控条件下完成的，在自然生活环境中的表现可能下降。</li>
+<li>手机固定在腰部，结果未必适用于口袋、背包、手腕或其他设备。</li>
+<li>重叠窗口相互关联，不能视为完全独立的观测。</li>
+<li>工程化特征隐藏了部分原始信号细节，并包含高度冗余的变换。</li>
+<li>数据没有缺失值，能够展示的缺失数据处理内容较少。</li>
+</ul>
+</section>
+<section id="伦理考虑" class="level2" data-number="7.3">
+<h2 data-number="7.3" class="anchored" data-anchor-id="伦理考虑"><span class="header-section-number">7.3</span> 伦理考虑</h2>
+<p>运动数据可能暴露健康状况、日常规律、与位置相关的行为或其他敏感信息。实际系统需要知情同意、目的限制、安全的数据处理方式，并明确禁止未经同意的雇主监控、保险定价或其他监视用途。在用于重要决策之前，还应针对不同年龄、体型、行动能力、手机设备和携带位置重新验证性能。</p>
+</section>
+</section>
+<section id="总体建议" class="level1" data-number="8">
+<h1 data-number="8"><span class="header-section-number">8</span> 总体建议</h1>
+<p>该数据集是 BRFSS 的一个高质量、低工作量替代方案。它直接满足 <strong>Large、Complex 和 Multi-class</strong> 三项要求，同时规模足够小，能够快速迭代。由于数据本身较为干净，分析重点将从缺失值处理转向防止数据泄漏、高维降维、相关预测变量以及参与者级泛化。如果小组希望完成一个技术上严谨的分类项目，同时避免 2024 BRFSS 带来的内存压力和复杂编码工作，该数据集非常合适。</p>
+</section>
+<section id="参考文献" class="level1" data-number="9">
+<h1 data-number="9"><span class="header-section-number">9</span> 参考文献</h1>
+<p>Anguita, D., Ghio, A., Oneto, L., Parra, X., &amp; Reyes-Ortiz, J. L. (2013). <em>A public domain dataset for human activity recognition using smartphones</em>. 21st European Symposium on Artificial Neural Networks, Computational Intelligence and Machine Learning, 437–442.</p>
+<p>Reyes-Ortiz, J. L., Anguita, D., Ghio, A., Oneto, L., &amp; Parra, X. (2012). <em>Human Activity Recognition Using Smartphones</em> [Dataset]. UCI Machine Learning Repository. <a href="https://doi.org/10.24432/C54S4K" class="uri">https://doi.org/10.24432/C54S4K</a></p>
+<!-- -->
+
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "已复制");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "已复制");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+    const viewSource = window.document.getElementById('quarto-view-source') ||
+                       window.document.getElementById('quarto-code-tools-source');
+    if (viewSource) {
+      const sourceUrl = viewSource.getAttribute("data-quarto-source-url");
+      viewSource.addEventListener("click", function(e) {
+        if (sourceUrl) {
+          // rstudio viewer pane
+          if (/\bcapabilities=\b/.test(window.location)) {
+            window.open(sourceUrl);
+          } else {
+            window.location.href = sourceUrl;
+          }
+        } else {
+          const modal = new bootstrap.Modal(document.getElementById('quarto-embedded-source-code-modal'));
+          modal.show();
+        }
+        return false;
+      });
+    }
+    function toggleCodeHandler(show) {
+      return function(e) {
+        const detailsSrc = window.document.querySelectorAll(".cell > details > .sourceCode");
+        for (let i=0; i<detailsSrc.length; i++) {
+          const details = detailsSrc[i].parentElement;
+          if (show) {
+            details.open = true;
+          } else {
+            details.removeAttribute("open");
+          }
+        }
+        const cellCodeDivs = window.document.querySelectorAll(".cell > .sourceCode");
+        const fromCls = show ? "hidden" : "unhidden";
+        const toCls = show ? "unhidden" : "hidden";
+        for (let i=0; i<cellCodeDivs.length; i++) {
+          const codeDiv = cellCodeDivs[i];
+          if (codeDiv.classList.contains(fromCls)) {
+            codeDiv.classList.remove(fromCls);
+            codeDiv.classList.add(toCls);
+          } 
+        }
+        return false;
+      }
+    }
+    const hideAllCode = window.document.getElementById("quarto-hide-all-code");
+    if (hideAllCode) {
+      hideAllCode.addEventListener("click", toggleCodeHandler(false));
+    }
+    const showAllCode = window.document.getElementById("quarto-show-all-code");
+    if (showAllCode) {
+      showAllCode.addEventListener("click", toggleCodeHandler(true));
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script><div class="modal fade" id="quarto-embedded-source-code-modal" tabindex="-1" aria-labelledby="quarto-embedded-source-code-modal-label" aria-hidden="true"><div class="modal-dialog modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="quarto-embedded-source-code-modal-label">源代码</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div class="">
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10" data-shortcodes="false"><pre class="sourceCode markdown code-with-copy"><code class="sourceCode markdown"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="an">title:</span><span class="co"> "项目规划与探索性数据分析"</span></span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a><span class="an">subtitle:</span><span class="co"> "利用智能手机传感器识别日常活动"</span></span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a><span class="an">author:</span><span class="co"> "STAT5003"</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a><span class="an">date:</span><span class="co"> last-modified</span></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a><span class="an">lang:</span><span class="co"> zh</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a><span class="an">format:</span></span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a><span class="co">  html:</span></span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a><span class="co">    toc: true</span></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="co">    toc-depth: 3</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="co">    number-sections: true</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a><span class="co">    code-fold: true</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a><span class="co">    code-tools: true</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a><span class="co">    fig-width: 9</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a><span class="co">    fig-height: 5</span></span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a><span class="co">    theme: cosmo</span></span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a><span class="an">execute:</span></span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a><span class="co">  echo: true</span></span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a><span class="co">  warning: false</span></span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a><span class="co">  message: false</span></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a><span class="co">  cache: true</span></span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a><span class="co">---</span></span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a><span class="fu"># 研究问题与数据集选择</span></span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a><span class="fu">## 现实分类任务</span></span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>本项目研究能否根据腰部智能手机的加速度计和陀螺仪测量数据，对一个人正在进行的活动进行分类。目标变量包含六个类别：**步行、上楼、下楼、坐姿、站立和躺卧**。这些类别不存在完整的自然顺序，因此这是一个无序多分类问题。</span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a><span class="fu">## 研究问题</span></span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a><span class="at">&gt; 对于未参与模型训练的新受试者，利用智能手机传感器的时域和频域特征，能够以多高的准确度识别六种常见日常活动？</span></span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>“未参与训练的新受试者”是研究问题的重要组成部分。同一参与者会产生多个时间窗口。如果随机拆分数据行，同一个人的运动模式可能同时进入训练集和测试集，从而高估模型表现。数据发布者提供的按参与者划分的数据集能够更真实地评价模型对新用户的泛化能力。</span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a><span class="fu">## 研究意义与利益相关者</span></span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-38"><a href="#cb10-38" aria-hidden="true" tabindex="-1"></a>人体活动识别可以用于健身记录、情境感知移动应用、工作场所安全系统，以及在经过临床验证后用于行动能力或康复监测。利益相关者包括设备开发者、研究人员、临床人员、服务机构以及其活动被测量的用户。</span>
+<span id="cb10-39"><a href="#cb10-39" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-40"><a href="#cb10-40" aria-hidden="true" tabindex="-1"></a>本数据集属于受控实验环境下的基准数据，不能直接作为临床诊断工具。错误分类可能产生误导性的健康或安全判断，而持续采集运动数据还涉及隐私与监控风险。实际部署需要取得知情同意、遵循数据最小化原则、安全存储数据、在目标人群中重新验证，并为用户提供明确的退出机制。</span>
+<span id="cb10-41"><a href="#cb10-41" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-42"><a href="#cb10-42" aria-hidden="true" tabindex="-1"></a><span class="fu"># 数据来源与可追溯性</span></span>
+<span id="cb10-43"><a href="#cb10-43" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-44"><a href="#cb10-44" aria-hidden="true" tabindex="-1"></a>**Human Activity Recognition Using Smartphones** 数据集由 <span class="co">[</span><span class="ot">UCI Machine Learning Repository</span><span class="co">](https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones)</span> 发布。实验招募了 30 名年龄为 19–48 岁的志愿者。参与者将 Samsung Galaxy S II 手机佩戴在腰部并完成六种活动。手机的加速度计和陀螺仪以 50 Hz 频率采集数据。研究者将信号划分为长度 2.56 秒、重叠率 50% 的窗口，并生成 561 个时域和频域特征。</span>
+<span id="cb10-45"><a href="#cb10-45" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-46"><a href="#cb10-46" aria-hidden="true" tabindex="-1"></a>本地文件 <span class="in">`UCI_HAR_Dataset.zip`</span> 直接下载自 UCI 官方分发地址，其 SHA-256 校验值为：</span>
+<span id="cb10-47"><a href="#cb10-47" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-48"><a href="#cb10-48" aria-hidden="true" tabindex="-1"></a><span class="in">```text</span></span>
+<span id="cb10-49"><a href="#cb10-49" aria-hidden="true" tabindex="-1"></a><span class="in">C00B803081A5C797CD5E4B83700A9810B38D53D9D84E01917E090E1FDBC81031</span></span>
+<span id="cb10-50"><a href="#cb10-50" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-51"><a href="#cb10-51" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-52"><a href="#cb10-52" aria-hidden="true" tabindex="-1"></a>该数据最初由 Anguita 等人（2013）介绍。UCI 已按照参与者将数据划分为训练集和测试集：约 70% 的参与者用于训练，其余参与者用于测试。本地文件包含 7,352 个训练窗口和 2,947 个测试窗口。</span>
+<span id="cb10-53"><a href="#cb10-53" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-54"><a href="#cb10-54" aria-hidden="true" tabindex="-1"></a>该数据来自 UCI 而非 Kaggle，不是 R 内置数据集，也不涉及作业禁止的主题。</span>
+<span id="cb10-55"><a href="#cb10-55" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-56"><a href="#cb10-56" aria-hidden="true" tabindex="-1"></a><span class="fu"># 数据读取与完整性检查</span></span>
+<span id="cb10-57"><a href="#cb10-57" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-58"><a href="#cb10-58" aria-hidden="true" tabindex="-1"></a>UCI 下载文件中还包含一个内层 ZIP。以下代码将两层压缩包解压到 R 会话的临时目录，读取特征名称和活动标签，并在保留官方训练／测试角色的前提下合并数据。</span>
+<span id="cb10-59"><a href="#cb10-59" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-62"><a href="#cb10-62" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb10-63"><a href="#cb10-63" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: setup</span></span>
+<span id="cb10-64"><a href="#cb10-64" aria-hidden="true" tabindex="-1"></a><span class="co">#| include: false</span></span>
+<span id="cb10-65"><a href="#cb10-65" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-66"><a href="#cb10-66" aria-hidden="true" tabindex="-1"></a>required_packages <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">"dplyr"</span>, <span class="st">"tidyr"</span>, <span class="st">"ggplot2"</span>, <span class="st">"scales"</span>, <span class="st">"knitr"</span>)</span>
+<span id="cb10-67"><a href="#cb10-67" aria-hidden="true" tabindex="-1"></a>missing_packages <span class="ot">&lt;-</span> required_packages[</span>
+<span id="cb10-68"><a href="#cb10-68" aria-hidden="true" tabindex="-1"></a>  <span class="sc">!</span><span class="fu">vapply</span>(required_packages, requireNamespace, <span class="fu">logical</span>(<span class="dv">1</span>), <span class="at">quietly =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-69"><a href="#cb10-69" aria-hidden="true" tabindex="-1"></a>]</span>
+<span id="cb10-70"><a href="#cb10-70" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">length</span>(missing_packages) <span class="sc">&gt;</span> <span class="dv">0</span>) {</span>
+<span id="cb10-71"><a href="#cb10-71" aria-hidden="true" tabindex="-1"></a>  <span class="fu">stop</span>(<span class="st">"渲染前请安装以下 R 包："</span>, <span class="fu">paste</span>(missing_packages, <span class="at">collapse =</span> <span class="st">", "</span>))</span>
+<span id="cb10-72"><a href="#cb10-72" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-73"><a href="#cb10-73" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-74"><a href="#cb10-74" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(dplyr)</span>
+<span id="cb10-75"><a href="#cb10-75" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(tidyr)</span>
+<span id="cb10-76"><a href="#cb10-76" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(ggplot2)</span>
+<span id="cb10-77"><a href="#cb10-77" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(scales)</span>
+<span id="cb10-78"><a href="#cb10-78" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(knitr)</span>
+<span id="cb10-79"><a href="#cb10-79" aria-hidden="true" tabindex="-1"></a><span class="fu">theme_set</span>(<span class="fu">theme_minimal</span>(<span class="at">base_size =</span> <span class="dv">12</span>, <span class="at">base_family =</span> <span class="st">"Arial Unicode MS"</span>))</span>
+<span id="cb10-80"><a href="#cb10-80" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-81"><a href="#cb10-81" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-84"><a href="#cb10-84" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb10-85"><a href="#cb10-85" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: import-data</span></span>
+<span id="cb10-86"><a href="#cb10-86" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-87"><a href="#cb10-87" aria-hidden="true" tabindex="-1"></a>data_zip <span class="ot">&lt;-</span> <span class="st">"UCI_HAR_Dataset.zip"</span></span>
+<span id="cb10-88"><a href="#cb10-88" aria-hidden="true" tabindex="-1"></a><span class="fu">stopifnot</span>(<span class="fu">file.exists</span>(data_zip))</span>
+<span id="cb10-89"><a href="#cb10-89" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-90"><a href="#cb10-90" aria-hidden="true" tabindex="-1"></a>extract_root <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="fu">tempdir</span>(), <span class="st">"uci_har_240_zh"</span>)</span>
+<span id="cb10-91"><a href="#cb10-91" aria-hidden="true" tabindex="-1"></a><span class="fu">dir.create</span>(extract_root, <span class="at">recursive =</span> <span class="cn">TRUE</span>, <span class="at">showWarnings =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb10-92"><a href="#cb10-92" aria-hidden="true" tabindex="-1"></a><span class="fu">unzip</span>(data_zip, <span class="at">exdir =</span> extract_root, <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-93"><a href="#cb10-93" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-94"><a href="#cb10-94" aria-hidden="true" tabindex="-1"></a>inner_zip <span class="ot">&lt;-</span> <span class="fu">list.files</span>(</span>
+<span id="cb10-95"><a href="#cb10-95" aria-hidden="true" tabindex="-1"></a>  extract_root,</span>
+<span id="cb10-96"><a href="#cb10-96" aria-hidden="true" tabindex="-1"></a>  <span class="at">pattern =</span> <span class="st">"UCI HAR Dataset[.]zip$"</span>,</span>
+<span id="cb10-97"><a href="#cb10-97" aria-hidden="true" tabindex="-1"></a>  <span class="at">full.names =</span> <span class="cn">TRUE</span></span>
+<span id="cb10-98"><a href="#cb10-98" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-99"><a href="#cb10-99" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">length</span>(inner_zip) <span class="sc">!=</span> <span class="dv">1</span>) <span class="fu">stop</span>(<span class="st">"内层数据压缩包数量不等于 1。"</span>)</span>
+<span id="cb10-100"><a href="#cb10-100" aria-hidden="true" tabindex="-1"></a><span class="fu">unzip</span>(inner_zip, <span class="at">exdir =</span> extract_root, <span class="at">overwrite =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-101"><a href="#cb10-101" aria-hidden="true" tabindex="-1"></a>data_dir <span class="ot">&lt;-</span> <span class="fu">file.path</span>(extract_root, <span class="st">"UCI HAR Dataset"</span>)</span>
+<span id="cb10-102"><a href="#cb10-102" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-103"><a href="#cb10-103" aria-hidden="true" tabindex="-1"></a>feature_key <span class="ot">&lt;-</span> <span class="fu">read.table</span>(</span>
+<span id="cb10-104"><a href="#cb10-104" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(data_dir, <span class="st">"features.txt"</span>),</span>
+<span id="cb10-105"><a href="#cb10-105" aria-hidden="true" tabindex="-1"></a>  <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"feature_id"</span>, <span class="st">"feature_name"</span>),</span>
+<span id="cb10-106"><a href="#cb10-106" aria-hidden="true" tabindex="-1"></a>  <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
+<span id="cb10-107"><a href="#cb10-107" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-108"><a href="#cb10-108" aria-hidden="true" tabindex="-1"></a>activity_key <span class="ot">&lt;-</span> <span class="fu">read.table</span>(</span>
+<span id="cb10-109"><a href="#cb10-109" aria-hidden="true" tabindex="-1"></a>  <span class="fu">file.path</span>(data_dir, <span class="st">"activity_labels.txt"</span>),</span>
+<span id="cb10-110"><a href="#cb10-110" aria-hidden="true" tabindex="-1"></a>  <span class="at">col.names =</span> <span class="fu">c</span>(<span class="st">"activity_id"</span>, <span class="st">"activity"</span>),</span>
+<span id="cb10-111"><a href="#cb10-111" aria-hidden="true" tabindex="-1"></a>  <span class="at">stringsAsFactors =</span> <span class="cn">FALSE</span></span>
+<span id="cb10-112"><a href="#cb10-112" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-113"><a href="#cb10-113" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-114"><a href="#cb10-114" aria-hidden="true" tabindex="-1"></a><span class="co"># 官方特征元数据中有 84 个重复名称。</span></span>
+<span id="cb10-115"><a href="#cb10-115" aria-hidden="true" tabindex="-1"></a><span class="co"># make.unique() 保留全部 561 列，同时生成可由 R 安全使用的唯一名称。</span></span>
+<span id="cb10-116"><a href="#cb10-116" aria-hidden="true" tabindex="-1"></a>feature_names <span class="ot">&lt;-</span> <span class="fu">make.unique</span>(feature_key<span class="sc">$</span>feature_name, <span class="at">sep =</span> <span class="st">"__duplicate_"</span>)</span>
+<span id="cb10-117"><a href="#cb10-117" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-118"><a href="#cb10-118" aria-hidden="true" tabindex="-1"></a>read_partition <span class="ot">&lt;-</span> <span class="cf">function</span>(partition) {</span>
+<span id="cb10-119"><a href="#cb10-119" aria-hidden="true" tabindex="-1"></a>  x <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="fu">file.path</span>(data_dir, partition, <span class="fu">paste0</span>(<span class="st">"X_"</span>, partition, <span class="st">".txt"</span>)))</span>
+<span id="cb10-120"><a href="#cb10-120" aria-hidden="true" tabindex="-1"></a>  <span class="fu">names</span>(x) <span class="ot">&lt;-</span> feature_names</span>
+<span id="cb10-121"><a href="#cb10-121" aria-hidden="true" tabindex="-1"></a>  y <span class="ot">&lt;-</span> <span class="fu">scan</span>(<span class="fu">file.path</span>(data_dir, partition, <span class="fu">paste0</span>(<span class="st">"y_"</span>, partition, <span class="st">".txt"</span>)),</span>
+<span id="cb10-122"><a href="#cb10-122" aria-hidden="true" tabindex="-1"></a>            <span class="at">quiet =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-123"><a href="#cb10-123" aria-hidden="true" tabindex="-1"></a>  subject <span class="ot">&lt;-</span> <span class="fu">scan</span>(</span>
+<span id="cb10-124"><a href="#cb10-124" aria-hidden="true" tabindex="-1"></a>    <span class="fu">file.path</span>(data_dir, partition, <span class="fu">paste0</span>(<span class="st">"subject_"</span>, partition, <span class="st">".txt"</span>)),</span>
+<span id="cb10-125"><a href="#cb10-125" aria-hidden="true" tabindex="-1"></a>    <span class="at">quiet =</span> <span class="cn">TRUE</span></span>
+<span id="cb10-126"><a href="#cb10-126" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb10-127"><a href="#cb10-127" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-128"><a href="#cb10-128" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_cols</span>(</span>
+<span id="cb10-129"><a href="#cb10-129" aria-hidden="true" tabindex="-1"></a>    <span class="fu">tibble</span>(<span class="at">partition =</span> partition, <span class="at">subject =</span> subject, <span class="at">activity_id =</span> y),</span>
+<span id="cb10-130"><a href="#cb10-130" aria-hidden="true" tabindex="-1"></a>    <span class="fu">as_tibble</span>(x, <span class="at">.name_repair =</span> <span class="st">"minimal"</span>)</span>
+<span id="cb10-131"><a href="#cb10-131" aria-hidden="true" tabindex="-1"></a>  ) <span class="sc">|&gt;</span></span>
+<span id="cb10-132"><a href="#cb10-132" aria-hidden="true" tabindex="-1"></a>    <span class="fu">left_join</span>(activity_key, <span class="at">by =</span> <span class="st">"activity_id"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb10-133"><a href="#cb10-133" aria-hidden="true" tabindex="-1"></a>    <span class="fu">relocate</span>(activity, <span class="at">.after =</span> activity_id)</span>
+<span id="cb10-134"><a href="#cb10-134" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb10-135"><a href="#cb10-135" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-136"><a href="#cb10-136" aria-hidden="true" tabindex="-1"></a>har <span class="ot">&lt;-</span> <span class="fu">bind_rows</span>(<span class="fu">read_partition</span>(<span class="st">"train"</span>), <span class="fu">read_partition</span>(<span class="st">"test"</span>)) <span class="sc">|&gt;</span></span>
+<span id="cb10-137"><a href="#cb10-137" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb10-138"><a href="#cb10-138" aria-hidden="true" tabindex="-1"></a>    <span class="at">partition =</span> <span class="fu">factor</span>(partition, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"train"</span>, <span class="st">"test"</span>)),</span>
+<span id="cb10-139"><a href="#cb10-139" aria-hidden="true" tabindex="-1"></a>    <span class="at">activity =</span> <span class="fu">factor</span>(activity, <span class="at">levels =</span> activity_key<span class="sc">$</span>activity)</span>
+<span id="cb10-140"><a href="#cb10-140" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb10-141"><a href="#cb10-141" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-142"><a href="#cb10-142" aria-hidden="true" tabindex="-1"></a>predictor_names <span class="ot">&lt;-</span> feature_names</span>
+<span id="cb10-143"><a href="#cb10-143" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-144"><a href="#cb10-144" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-147"><a href="#cb10-147" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb10-148"><a href="#cb10-148" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: integrity-audit</span></span>
+<span id="cb10-149"><a href="#cb10-149" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-150"><a href="#cb10-150" aria-hidden="true" tabindex="-1"></a>integrity_summary <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb10-151"><a href="#cb10-151" aria-hidden="true" tabindex="-1"></a>  检查项目 <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb10-152"><a href="#cb10-152" aria-hidden="true" tabindex="-1"></a>    <span class="st">"观测数"</span>, <span class="st">"传感器特征数"</span>, <span class="st">"分析数据总列数"</span>, <span class="st">"参与者人数"</span>,</span>
+<span id="cb10-153"><a href="#cb10-153" aria-hidden="true" tabindex="-1"></a>    <span class="st">"预测变量缺失值数"</span>, <span class="st">"预测变量非有限值数"</span>,</span>
+<span id="cb10-154"><a href="#cb10-154" aria-hidden="true" tabindex="-1"></a>    <span class="st">"原始重复特征名称数"</span>, <span class="st">"训练集与测试集共有的参与者数"</span></span>
+<span id="cb10-155"><a href="#cb10-155" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb10-156"><a href="#cb10-156" aria-hidden="true" tabindex="-1"></a>  数值 <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb10-157"><a href="#cb10-157" aria-hidden="true" tabindex="-1"></a>    <span class="fu">nrow</span>(har), <span class="fu">length</span>(predictor_names), <span class="fu">ncol</span>(har), <span class="fu">n_distinct</span>(har<span class="sc">$</span>subject),</span>
+<span id="cb10-158"><a href="#cb10-158" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(<span class="fu">is.na</span>(har[predictor_names])),</span>
+<span id="cb10-159"><a href="#cb10-159" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(<span class="sc">!</span><span class="fu">is.finite</span>(<span class="fu">as.matrix</span>(har[predictor_names]))),</span>
+<span id="cb10-160"><a href="#cb10-160" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(<span class="fu">duplicated</span>(feature_key<span class="sc">$</span>feature_name)),</span>
+<span id="cb10-161"><a href="#cb10-161" aria-hidden="true" tabindex="-1"></a>    <span class="fu">length</span>(<span class="fu">intersect</span>(</span>
+<span id="cb10-162"><a href="#cb10-162" aria-hidden="true" tabindex="-1"></a>      <span class="fu">unique</span>(har<span class="sc">$</span>subject[har<span class="sc">$</span>partition <span class="sc">==</span> <span class="st">"train"</span>]),</span>
+<span id="cb10-163"><a href="#cb10-163" aria-hidden="true" tabindex="-1"></a>      <span class="fu">unique</span>(har<span class="sc">$</span>subject[har<span class="sc">$</span>partition <span class="sc">==</span> <span class="st">"test"</span>])</span>
+<span id="cb10-164"><a href="#cb10-164" aria-hidden="true" tabindex="-1"></a>    ))</span>
+<span id="cb10-165"><a href="#cb10-165" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb10-166"><a href="#cb10-166" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-167"><a href="#cb10-167" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-168"><a href="#cb10-168" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(integrity_summary, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"r"</span>))</span>
+<span id="cb10-169"><a href="#cb10-169" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-170"><a href="#cb10-170" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-171"><a href="#cb10-171" aria-hidden="true" tabindex="-1"></a>完整性检查应得到 10,299 条观测、561 个传感器特征、30 名参与者、零个缺失或非有限预测值、84 个重复的原始特征名称，以及零个同时出现在训练集和测试集的参与者。重复名称是元数据问题，而不是重复的数据列；代码通过确定性的方式修复名称并保留所有特征。</span>
+<span id="cb10-172"><a href="#cb10-172" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-173"><a href="#cb10-173" aria-hidden="true" tabindex="-1"></a><span class="fu"># 作业要求匹配度</span></span>
+<span id="cb10-174"><a href="#cb10-174" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-175"><a href="#cb10-175" aria-hidden="true" tabindex="-1"></a>该数据集无需对“Messy”或“Integrated”作有争议的解释，便能明确满足三项作业要求。</span>
+<span id="cb10-176"><a href="#cb10-176" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-177"><a href="#cb10-177" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> 要求 <span class="pp">|</span> 证据 <span class="pp">|</span></span>
+<span id="cb10-178"><a href="#cb10-178" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span>:--<span class="pp">|</span>:--<span class="pp">|</span></span>
+<span id="cb10-179"><a href="#cb10-179" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Large <span class="pp">|</span> 10,299 条观测，刚刚超过 10,000 条的门槛 <span class="pp">|</span></span>
+<span id="cb10-180"><a href="#cb10-180" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Complex <span class="pp">|</span> 561 个传感器特征，远高于 100 个变量的门槛 <span class="pp">|</span></span>
+<span id="cb10-181"><a href="#cb10-181" aria-hidden="true" tabindex="-1"></a><span class="pp">|</span> Multi-class <span class="pp">|</span> 六个无序活动类别 <span class="pp">|</span></span>
+<span id="cb10-182"><a href="#cb10-182" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-183"><a href="#cb10-183" aria-hidden="true" tabindex="-1"></a>它的规模明显小于 2024 BRFSS 方案（457,670 行、301 个变量），普通笔记本电脑即可较快完成分析。其核心难点是高维度和变量冗余，而不是文件大小或复杂的缺失编码。</span>
+<span id="cb10-184"><a href="#cb10-184" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-185"><a href="#cb10-185" aria-hidden="true" tabindex="-1"></a><span class="fu">## 数据规模与类别平衡</span></span>
+<span id="cb10-186"><a href="#cb10-186" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-189"><a href="#cb10-189" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb10-190"><a href="#cb10-190" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: class-distribution</span></span>
+<span id="cb10-191"><a href="#cb10-191" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-192"><a href="#cb10-192" aria-hidden="true" tabindex="-1"></a>activity_names_zh <span class="ot">&lt;-</span> <span class="fu">c</span>(</span>
+<span id="cb10-193"><a href="#cb10-193" aria-hidden="true" tabindex="-1"></a>  <span class="at">WALKING =</span> <span class="st">"步行"</span>, <span class="at">WALKING_UPSTAIRS =</span> <span class="st">"上楼"</span>, <span class="at">WALKING_DOWNSTAIRS =</span> <span class="st">"下楼"</span>,</span>
+<span id="cb10-194"><a href="#cb10-194" aria-hidden="true" tabindex="-1"></a>  <span class="at">SITTING =</span> <span class="st">"坐姿"</span>, <span class="at">STANDING =</span> <span class="st">"站立"</span>, <span class="at">LAYING =</span> <span class="st">"躺卧"</span></span>
+<span id="cb10-195"><a href="#cb10-195" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-196"><a href="#cb10-196" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-197"><a href="#cb10-197" aria-hidden="true" tabindex="-1"></a>class_distribution <span class="ot">&lt;-</span> har <span class="sc">|&gt;</span></span>
+<span id="cb10-198"><a href="#cb10-198" aria-hidden="true" tabindex="-1"></a>  <span class="fu">count</span>(activity, <span class="at">name =</span> <span class="st">"窗口数"</span>) <span class="sc">|&gt;</span></span>
+<span id="cb10-199"><a href="#cb10-199" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb10-200"><a href="#cb10-200" aria-hidden="true" tabindex="-1"></a>    比例 <span class="ot">=</span> 窗口数 <span class="sc">/</span> <span class="fu">sum</span>(窗口数),</span>
+<span id="cb10-201"><a href="#cb10-201" aria-hidden="true" tabindex="-1"></a>    活动 <span class="ot">=</span> <span class="fu">factor</span>(activity_names_zh[<span class="fu">as.character</span>(activity)],</span>
+<span id="cb10-202"><a href="#cb10-202" aria-hidden="true" tabindex="-1"></a>                  <span class="at">levels =</span> <span class="fu">unname</span>(activity_names_zh))</span>
+<span id="cb10-203"><a href="#cb10-203" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb10-204"><a href="#cb10-204" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-205"><a href="#cb10-205" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(</span>
+<span id="cb10-206"><a href="#cb10-206" aria-hidden="true" tabindex="-1"></a>  class_distribution <span class="sc">|&gt;</span></span>
+<span id="cb10-207"><a href="#cb10-207" aria-hidden="true" tabindex="-1"></a>    <span class="fu">transmute</span>(活动, 窗口数, 比例 <span class="ot">=</span> <span class="fu">percent</span>(比例, <span class="at">accuracy =</span> <span class="fl">0.1</span>)),</span>
+<span id="cb10-208"><a href="#cb10-208" aria-hidden="true" tabindex="-1"></a>  <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"r"</span>, <span class="st">"r"</span>)</span>
+<span id="cb10-209"><a href="#cb10-209" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-210"><a href="#cb10-210" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-211"><a href="#cb10-211" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-214"><a href="#cb10-214" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb10-215"><a href="#cb10-215" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: class-distribution-plot</span></span>
+<span id="cb10-216"><a href="#cb10-216" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "全部 10,299 个时间窗口中六种活动的类别分布。"</span></span>
+<span id="cb10-217"><a href="#cb10-217" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-218"><a href="#cb10-218" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(class_distribution,</span>
+<span id="cb10-219"><a href="#cb10-219" aria-hidden="true" tabindex="-1"></a>       <span class="fu">aes</span>(<span class="at">x =</span> <span class="fu">reorder</span>(活动, 窗口数), <span class="at">y =</span> 窗口数, <span class="at">fill =</span> 活动)) <span class="sc">+</span></span>
+<span id="cb10-220"><a href="#cb10-220" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_col</span>(<span class="at">show.legend =</span> <span class="cn">FALSE</span>) <span class="sc">+</span></span>
+<span id="cb10-221"><a href="#cb10-221" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_text</span>(<span class="fu">aes</span>(<span class="at">label =</span> <span class="fu">percent</span>(比例, <span class="at">accuracy =</span> <span class="fl">0.1</span>)),</span>
+<span id="cb10-222"><a href="#cb10-222" aria-hidden="true" tabindex="-1"></a>            <span class="at">hjust =</span> <span class="sc">-</span><span class="fl">0.1</span>, <span class="at">size =</span> <span class="fl">3.5</span>) <span class="sc">+</span></span>
+<span id="cb10-223"><a href="#cb10-223" aria-hidden="true" tabindex="-1"></a>  <span class="fu">coord_flip</span>() <span class="sc">+</span></span>
+<span id="cb10-224"><a href="#cb10-224" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">labels =</span> comma,</span>
+<span id="cb10-225"><a href="#cb10-225" aria-hidden="true" tabindex="-1"></a>                     <span class="at">expand =</span> <span class="fu">expansion</span>(<span class="at">mult =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.12</span>))) <span class="sc">+</span></span>
+<span id="cb10-226"><a href="#cb10-226" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_fill_brewer</span>(<span class="at">palette =</span> <span class="st">"Set2"</span>) <span class="sc">+</span></span>
+<span id="cb10-227"><a href="#cb10-227" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">title =</span> <span class="st">"六个活动类别较为平衡"</span>, <span class="at">x =</span> <span class="cn">NULL</span>, <span class="at">y =</span> <span class="st">"时间窗口数"</span>)</span>
+<span id="cb10-228"><a href="#cb10-228" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-229"><a href="#cb10-229" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-230"><a href="#cb10-230" aria-hidden="true" tabindex="-1"></a>最大类别是“躺卧”，最小类别是“下楼”，两者样本数之比小于 1.4。总体准确率具有一定解释价值，但仍应报告 Macro F1 和每类召回率，因为坐姿和站立在物理状态上较为相似，其错误率可能不同。</span>
+<span id="cb10-231"><a href="#cb10-231" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-232"><a href="#cb10-232" aria-hidden="true" tabindex="-1"></a><span class="fu">## 高维度与变量冗余</span></span>
+<span id="cb10-233"><a href="#cb10-233" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-234"><a href="#cb10-234" aria-hidden="true" tabindex="-1"></a>561 个预测变量均为传感器窗口的数值摘要，包括均值、标准差、信号幅度面积、相关系数、自回归系数、频率成分、熵和角度变量。大量变量由相互关联的信号经过不同变换得到，因此可能存在严重的相关性和多重共线性。</span>
+<span id="cb10-235"><a href="#cb10-235" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-238"><a href="#cb10-238" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb10-239"><a href="#cb10-239" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: feature-audit</span></span>
+<span id="cb10-240"><a href="#cb10-240" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-241"><a href="#cb10-241" aria-hidden="true" tabindex="-1"></a>feature_sd <span class="ot">&lt;-</span> <span class="fu">vapply</span>(har[predictor_names], sd, <span class="fu">numeric</span>(<span class="dv">1</span>))</span>
+<span id="cb10-242"><a href="#cb10-242" aria-hidden="true" tabindex="-1"></a>feature_unique <span class="ot">&lt;-</span> <span class="fu">vapply</span>(har[predictor_names], n_distinct, <span class="fu">integer</span>(<span class="dv">1</span>))</span>
+<span id="cb10-243"><a href="#cb10-243" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-244"><a href="#cb10-244" aria-hidden="true" tabindex="-1"></a>feature_summary <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb10-245"><a href="#cb10-245" aria-hidden="true" tabindex="-1"></a>  统计量 <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb10-246"><a href="#cb10-246" aria-hidden="true" tabindex="-1"></a>    <span class="st">"预测变量数"</span>, <span class="st">"零方差预测变量数"</span>, <span class="st">"近似常量预测变量数（不超过 10 个不同值）"</span>,</span>
+<span id="cb10-247"><a href="#cb10-247" aria-hidden="true" tabindex="-1"></a>    <span class="st">"全体预测值的最小值"</span>, <span class="st">"全体预测值的最大值"</span></span>
+<span id="cb10-248"><a href="#cb10-248" aria-hidden="true" tabindex="-1"></a>  ),</span>
+<span id="cb10-249"><a href="#cb10-249" aria-hidden="true" tabindex="-1"></a>  数值 <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb10-250"><a href="#cb10-250" aria-hidden="true" tabindex="-1"></a>    <span class="fu">length</span>(predictor_names), <span class="fu">sum</span>(feature_sd <span class="sc">==</span> <span class="dv">0</span>), <span class="fu">sum</span>(feature_unique <span class="sc">&lt;=</span> <span class="dv">10</span>),</span>
+<span id="cb10-251"><a href="#cb10-251" aria-hidden="true" tabindex="-1"></a>    <span class="fu">min</span>(<span class="fu">as.matrix</span>(har[predictor_names])), <span class="fu">max</span>(<span class="fu">as.matrix</span>(har[predictor_names]))</span>
+<span id="cb10-252"><a href="#cb10-252" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb10-253"><a href="#cb10-253" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-254"><a href="#cb10-254" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-255"><a href="#cb10-255" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(feature_summary, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"r"</span>), <span class="at">digits =</span> <span class="dv">3</span>)</span>
+<span id="cb10-256"><a href="#cb10-256" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-257"><a href="#cb10-257" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-260"><a href="#cb10-260" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb10-261"><a href="#cb10-261" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: correlation-audit</span></span>
+<span id="cb10-262"><a href="#cb10-262" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-263"><a href="#cb10-263" aria-hidden="true" tabindex="-1"></a>correlation_matrix <span class="ot">&lt;-</span> <span class="fu">cor</span>(<span class="fu">as.matrix</span>(har[predictor_names]))</span>
+<span id="cb10-264"><a href="#cb10-264" aria-hidden="true" tabindex="-1"></a>upper_correlations <span class="ot">&lt;-</span> <span class="fu">abs</span>(correlation_matrix[<span class="fu">upper.tri</span>(correlation_matrix)])</span>
+<span id="cb10-265"><a href="#cb10-265" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-266"><a href="#cb10-266" aria-hidden="true" tabindex="-1"></a>correlation_summary <span class="ot">&lt;-</span> <span class="fu">tibble</span>(</span>
+<span id="cb10-267"><a href="#cb10-267" aria-hidden="true" tabindex="-1"></a>  相关阈值 <span class="ot">=</span> <span class="fu">c</span>(<span class="st">"|r| &gt;= 0.80"</span>, <span class="st">"|r| &gt;= 0.90"</span>, <span class="st">"|r| &gt;= 0.95"</span>, <span class="st">"|r| &gt;= 0.99"</span>),</span>
+<span id="cb10-268"><a href="#cb10-268" aria-hidden="true" tabindex="-1"></a>  特征对数量 <span class="ot">=</span> <span class="fu">c</span>(</span>
+<span id="cb10-269"><a href="#cb10-269" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(upper_correlations <span class="sc">&gt;=</span> <span class="fl">0.80</span>), <span class="fu">sum</span>(upper_correlations <span class="sc">&gt;=</span> <span class="fl">0.90</span>),</span>
+<span id="cb10-270"><a href="#cb10-270" aria-hidden="true" tabindex="-1"></a>    <span class="fu">sum</span>(upper_correlations <span class="sc">&gt;=</span> <span class="fl">0.95</span>), <span class="fu">sum</span>(upper_correlations <span class="sc">&gt;=</span> <span class="fl">0.99</span>)</span>
+<span id="cb10-271"><a href="#cb10-271" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb10-272"><a href="#cb10-272" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb10-273"><a href="#cb10-273" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-274"><a href="#cb10-274" aria-hidden="true" tabindex="-1"></a><span class="fu">kable</span>(correlation_summary, <span class="at">align =</span> <span class="fu">c</span>(<span class="st">"l"</span>, <span class="st">"r"</span>))</span>
+<span id="cb10-275"><a href="#cb10-275" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-276"><a href="#cb10-276" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-277"><a href="#cb10-277" aria-hidden="true" tabindex="-1"></a>相关性检查说明，直接将所有变量放入无正则化模型会导致估计不稳定且难以解释。建模时需要使用降维、正则化或经过验证的特征筛选。所有预处理参数都只能在训练数据上估计。</span>
+<span id="cb10-278"><a href="#cb10-278" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-279"><a href="#cb10-279" aria-hidden="true" tabindex="-1"></a><span class="fu">## 活动结构的低维可视化</span></span>
+<span id="cb10-280"><a href="#cb10-280" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-281"><a href="#cb10-281" aria-hidden="true" tabindex="-1"></a>主成分分析（PCA）可以将 561 维特征空间压缩后进行可视化。以下 PCA 只使用训练数据拟合，再将完全相同的变换应用于未参与拟合的测试受试者。</span>
+<span id="cb10-282"><a href="#cb10-282" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-285"><a href="#cb10-285" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb10-286"><a href="#cb10-286" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: pca</span></span>
+<span id="cb10-287"><a href="#cb10-287" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-288"><a href="#cb10-288" aria-hidden="true" tabindex="-1"></a>train_index <span class="ot">&lt;-</span> har<span class="sc">$</span>partition <span class="sc">==</span> <span class="st">"train"</span></span>
+<span id="cb10-289"><a href="#cb10-289" aria-hidden="true" tabindex="-1"></a>pca_fit <span class="ot">&lt;-</span> <span class="fu">prcomp</span>(har[train_index, predictor_names], <span class="at">center =</span> <span class="cn">TRUE</span>, <span class="at">scale. =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb10-290"><a href="#cb10-290" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-291"><a href="#cb10-291" aria-hidden="true" tabindex="-1"></a>pca_scores <span class="ot">&lt;-</span> <span class="fu">predict</span>(pca_fit, <span class="at">newdata =</span> har[predictor_names])[, <span class="dv">1</span><span class="sc">:</span><span class="dv">2</span>] <span class="sc">|&gt;</span></span>
+<span id="cb10-292"><a href="#cb10-292" aria-hidden="true" tabindex="-1"></a>  <span class="fu">as_tibble</span>() <span class="sc">|&gt;</span></span>
+<span id="cb10-293"><a href="#cb10-293" aria-hidden="true" tabindex="-1"></a>  <span class="fu">bind_cols</span>(har <span class="sc">|&gt;</span> <span class="fu">select</span>(activity, partition)) <span class="sc">|&gt;</span></span>
+<span id="cb10-294"><a href="#cb10-294" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb10-295"><a href="#cb10-295" aria-hidden="true" tabindex="-1"></a>    活动 <span class="ot">=</span> <span class="fu">factor</span>(activity_names_zh[<span class="fu">as.character</span>(activity)],</span>
+<span id="cb10-296"><a href="#cb10-296" aria-hidden="true" tabindex="-1"></a>                  <span class="at">levels =</span> <span class="fu">unname</span>(activity_names_zh)),</span>
+<span id="cb10-297"><a href="#cb10-297" aria-hidden="true" tabindex="-1"></a>    数据分区 <span class="ot">=</span> <span class="fu">factor</span>(partition, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"train"</span>, <span class="st">"test"</span>),</span>
+<span id="cb10-298"><a href="#cb10-298" aria-hidden="true" tabindex="-1"></a>                      <span class="at">labels =</span> <span class="fu">c</span>(<span class="st">"训练集"</span>, <span class="st">"测试集"</span>))</span>
+<span id="cb10-299"><a href="#cb10-299" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb10-300"><a href="#cb10-300" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-301"><a href="#cb10-301" aria-hidden="true" tabindex="-1"></a>explained <span class="ot">&lt;-</span> <span class="dv">100</span> <span class="sc">*</span> pca_fit<span class="sc">$</span>sdev<span class="sc">^</span><span class="dv">2</span> <span class="sc">/</span> <span class="fu">sum</span>(pca_fit<span class="sc">$</span>sdev<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb10-302"><a href="#cb10-302" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-303"><a href="#cb10-303" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-306"><a href="#cb10-306" aria-hidden="true" tabindex="-1"></a><span class="in">```{r}</span></span>
+<span id="cb10-307"><a href="#cb10-307" aria-hidden="true" tabindex="-1"></a><span class="co">#| label: pca-plot</span></span>
+<span id="cb10-308"><a href="#cb10-308" aria-hidden="true" tabindex="-1"></a><span class="co">#| fig-cap: "前两个主成分。PCA 仅使用训练参与者的数据拟合。"</span></span>
+<span id="cb10-309"><a href="#cb10-309" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-310"><a href="#cb10-310" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(pca_scores, <span class="fu">aes</span>(PC1, PC2, <span class="at">colour =</span> 活动)) <span class="sc">+</span></span>
+<span id="cb10-311"><a href="#cb10-311" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>(<span class="at">alpha =</span> <span class="fl">0.35</span>, <span class="at">size =</span> <span class="fl">0.7</span>) <span class="sc">+</span></span>
+<span id="cb10-312"><a href="#cb10-312" aria-hidden="true" tabindex="-1"></a>  <span class="fu">facet_wrap</span>(<span class="sc">~</span>数据分区) <span class="sc">+</span></span>
+<span id="cb10-313"><a href="#cb10-313" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_colour_brewer</span>(<span class="at">palette =</span> <span class="st">"Dark2"</span>) <span class="sc">+</span></span>
+<span id="cb10-314"><a href="#cb10-314" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(</span>
+<span id="cb10-315"><a href="#cb10-315" aria-hidden="true" tabindex="-1"></a>    <span class="at">title =</span> <span class="st">"前两个主成分能够区分主要活动类型"</span>,</span>
+<span id="cb10-316"><a href="#cb10-316" aria-hidden="true" tabindex="-1"></a>    <span class="at">subtitle =</span> <span class="fu">paste0</span>(</span>
+<span id="cb10-317"><a href="#cb10-317" aria-hidden="true" tabindex="-1"></a>      <span class="st">"PC1 和 PC2 分别解释标准化方差的 "</span>, <span class="fu">round</span>(explained[<span class="dv">1</span>], <span class="dv">1</span>), <span class="st">"% 和 "</span>,</span>
+<span id="cb10-318"><a href="#cb10-318" aria-hidden="true" tabindex="-1"></a>      <span class="fu">round</span>(explained[<span class="dv">2</span>], <span class="dv">1</span>), <span class="st">"%"</span></span>
+<span id="cb10-319"><a href="#cb10-319" aria-hidden="true" tabindex="-1"></a>    ),</span>
+<span id="cb10-320"><a href="#cb10-320" aria-hidden="true" tabindex="-1"></a>    <span class="at">colour =</span> <span class="st">"活动"</span></span>
+<span id="cb10-321"><a href="#cb10-321" aria-hidden="true" tabindex="-1"></a>  )</span>
+<span id="cb10-322"><a href="#cb10-322" aria-hidden="true" tabindex="-1"></a><span class="in">```</span></span>
+<span id="cb10-323"><a href="#cb10-323" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-324"><a href="#cb10-324" aria-hidden="true" tabindex="-1"></a>该图只用于描述数据结构，不能作为模型性能证据。二维空间中的分离并不意味着两个主成分足以完成分类；坐姿和站立等相近活动之间出现重叠也符合预期。</span>
+<span id="cb10-325"><a href="#cb10-325" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-326"><a href="#cb10-326" aria-hidden="true" tabindex="-1"></a><span class="fu"># 数据准备计划</span></span>
+<span id="cb10-327"><a href="#cb10-327" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-328"><a href="#cb10-328" aria-hidden="true" tabindex="-1"></a><span class="ss">1. </span>保留 UCI 按参与者划分的训练集和测试集，不随机重新划分单个时间窗口。</span>
+<span id="cb10-329"><a href="#cb10-329" aria-hidden="true" tabindex="-1"></a><span class="ss">2. </span>在所有模型与预处理方案确定前，不使用测试集进行选择或调参。</span>
+<span id="cb10-330"><a href="#cb10-330" aria-hidden="true" tabindex="-1"></a><span class="ss">3. </span>以可复现方式修复重复的特征名称，同时保留原始名称映射。</span>
+<span id="cb10-331"><a href="#cb10-331" aria-hidden="true" tabindex="-1"></a><span class="ss">4. </span>中心化、标准化、PCA、相关性过滤和其他特征筛选只能使用训练数据估计。</span>
+<span id="cb10-332"><a href="#cb10-332" aria-hidden="true" tabindex="-1"></a><span class="ss">5. </span>删除零方差变量；对于线性模型，考虑相关性过滤或 PCA。</span>
+<span id="cb10-333"><a href="#cb10-333" aria-hidden="true" tabindex="-1"></a><span class="ss">6. </span>在训练集内部按照 <span class="in">`subject`</span> 进行分组交叉验证，保证每折验证对象未出现在该折训练数据中。</span>
+<span id="cb10-334"><a href="#cb10-334" aria-hidden="true" tabindex="-1"></a><span class="ss">7. </span>保留所有六个目标类别，并分别报告各类别错误率。</span>
+<span id="cb10-335"><a href="#cb10-335" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-336"><a href="#cb10-336" aria-hidden="true" tabindex="-1"></a>由于同一参与者的相邻窗口彼此重叠，10,299 条数据并非完全独立。若忽略参与者层面的聚类结构，将夸大有效样本量。统计推断与不确定性估计必须考虑这种依赖关系。</span>
+<span id="cb10-337"><a href="#cb10-337" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-338"><a href="#cb10-338" aria-hidden="true" tabindex="-1"></a><span class="fu"># EDA 对建模方案的启示</span></span>
+<span id="cb10-339"><a href="#cb10-339" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-340"><a href="#cb10-340" aria-hidden="true" tabindex="-1"></a>合理的基线模型是：先进行只基于训练集的标准化和降维，再拟合多项 Logistic 回归。正则化多项回归可作为更强的线性模型。随机森林或 gradient boosting 可以处理非线性关系和交互作用；支持向量机也适合该高维特征空间。</span>
+<span id="cb10-341"><a href="#cb10-341" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-342"><a href="#cb10-342" aria-hidden="true" tabindex="-1"></a>模型调参应采用按参与者分组的交叉验证。最终只使用一次官方测试集进行评价。建议报告：</span>
+<span id="cb10-343"><a href="#cb10-343" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-344"><a href="#cb10-344" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>总体 accuracy 和 Macro F1；</span>
+<span id="cb10-345"><a href="#cb10-345" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>balanced accuracy；</span>
+<span id="cb10-346"><a href="#cb10-346" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>每个类别的 precision 和 recall；</span>
+<span id="cb10-347"><a href="#cb10-347" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>六分类 confusion matrix；</span>
+<span id="cb10-348"><a href="#cb10-348" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>各测试参与者的分类准确率。</span>
+<span id="cb10-349"><a href="#cb10-349" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-350"><a href="#cb10-350" aria-hidden="true" tabindex="-1"></a>最值得关注的错误可能出现在三种动态活动之间，或坐姿与站立之间。将静态姿势误判为动态活动，与混淆两种相似的步行状态具有不同含义，因此所有综合指标都应配合混淆矩阵解释。</span>
+<span id="cb10-351"><a href="#cb10-351" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-352"><a href="#cb10-352" aria-hidden="true" tabindex="-1"></a><span class="fu"># 优势、局限与伦理问题</span></span>
+<span id="cb10-353"><a href="#cb10-353" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-354"><a href="#cb10-354" aria-hidden="true" tabindex="-1"></a><span class="fu">## 优势</span></span>
+<span id="cb10-355"><a href="#cb10-355" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-356"><a href="#cb10-356" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>通过客观数值证据明确满足三项作业要求。</span>
+<span id="cb10-357"><a href="#cb10-357" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>压缩后约 59 MB、共 10,299 行，普通笔记本电脑即可处理。</span>
+<span id="cb10-358"><a href="#cb10-358" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>官方参与者级划分支持严谨的模型泛化问题。</span>
+<span id="cb10-359"><a href="#cb10-359" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>类别较为平衡，活动标签通过录像辅助标注。</span>
+<span id="cb10-360"><a href="#cb10-360" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>561 个特征为降维和相关性分析提供充分空间。</span>
+<span id="cb10-361"><a href="#cb10-361" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-362"><a href="#cb10-362" aria-hidden="true" tabindex="-1"></a><span class="fu">## 局限</span></span>
+<span id="cb10-363"><a href="#cb10-363" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-364"><a href="#cb10-364" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>只有 30 名 19–48 岁的参与者，人口多样性有限。</span>
+<span id="cb10-365"><a href="#cb10-365" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>活动是在受控条件下完成的，在自然生活环境中的表现可能下降。</span>
+<span id="cb10-366"><a href="#cb10-366" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>手机固定在腰部，结果未必适用于口袋、背包、手腕或其他设备。</span>
+<span id="cb10-367"><a href="#cb10-367" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>重叠窗口相互关联，不能视为完全独立的观测。</span>
+<span id="cb10-368"><a href="#cb10-368" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>工程化特征隐藏了部分原始信号细节，并包含高度冗余的变换。</span>
+<span id="cb10-369"><a href="#cb10-369" aria-hidden="true" tabindex="-1"></a><span class="ss">- </span>数据没有缺失值，能够展示的缺失数据处理内容较少。</span>
+<span id="cb10-370"><a href="#cb10-370" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-371"><a href="#cb10-371" aria-hidden="true" tabindex="-1"></a><span class="fu">## 伦理考虑</span></span>
+<span id="cb10-372"><a href="#cb10-372" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-373"><a href="#cb10-373" aria-hidden="true" tabindex="-1"></a>运动数据可能暴露健康状况、日常规律、与位置相关的行为或其他敏感信息。实际系统需要知情同意、目的限制、安全的数据处理方式，并明确禁止未经同意的雇主监控、保险定价或其他监视用途。在用于重要决策之前，还应针对不同年龄、体型、行动能力、手机设备和携带位置重新验证性能。</span>
+<span id="cb10-374"><a href="#cb10-374" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-375"><a href="#cb10-375" aria-hidden="true" tabindex="-1"></a><span class="fu"># 总体建议</span></span>
+<span id="cb10-376"><a href="#cb10-376" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-377"><a href="#cb10-377" aria-hidden="true" tabindex="-1"></a>该数据集是 BRFSS 的一个高质量、低工作量替代方案。它直接满足 **Large、Complex 和 Multi-class** 三项要求，同时规模足够小，能够快速迭代。由于数据本身较为干净，分析重点将从缺失值处理转向防止数据泄漏、高维降维、相关预测变量以及参与者级泛化。如果小组希望完成一个技术上严谨的分类项目，同时避免 2024 BRFSS 带来的内存压力和复杂编码工作，该数据集非常合适。</span>
+<span id="cb10-378"><a href="#cb10-378" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-379"><a href="#cb10-379" aria-hidden="true" tabindex="-1"></a><span class="fu"># 参考文献</span></span>
+<span id="cb10-380"><a href="#cb10-380" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-381"><a href="#cb10-381" aria-hidden="true" tabindex="-1"></a>Anguita, D., Ghio, A., Oneto, L., Parra, X., &amp; Reyes-Ortiz, J. L. (2013). *A public domain dataset for human activity recognition using smartphones*. 21st European Symposium on Artificial Neural Networks, Computational Intelligence and Machine Learning, 437–442.</span>
+<span id="cb10-382"><a href="#cb10-382" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-383"><a href="#cb10-383" aria-hidden="true" tabindex="-1"></a>Reyes-Ortiz, J. L., Anguita, D., Ghio, A., Oneto, L., &amp; Parra, X. (2012). *Human Activity Recognition Using Smartphones* <span class="co">[</span><span class="ot">Dataset</span><span class="co">]</span>. UCI Machine Learning Repository. <span class="ot">&lt;https://doi.org/10.24432/C54S4K&gt;</span></span>
+</code></pre></div><button title="复制到剪贴板" class="code-copy-button" data-in-quarto-modal=""><i class="bi"></i></button></div>
+</div></div></div></div></div>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

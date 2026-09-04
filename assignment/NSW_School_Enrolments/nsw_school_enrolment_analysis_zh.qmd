@@ -1,0 +1,422 @@
+---
+title: "项目规划与探索性数据分析"
+subtitle: "NSW 公立学校年度入学规模分类"
+author: "STAT5003"
+date: last-modified
+lang: zh
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+    theme: cosmo
+execute:
+  echo: true
+  warning: false
+  message: false
+---
+
+# 执行摘要
+
+本项目使用 NSW Department of Education 发布的两份官方数据：2004–2025 年逐校学生人数，以及 NSW 公立学校主数据。两份数据通过唯一学校代码 `School_code` 连接，并将宽格式年度人数转换为学校—年份长表。
+
+研究目标是根据年份、学校教育阶段、地理位置、偏远程度及社会教育背景指标，把一所学校某一年的入学人数分类为 **Small（少于 100 人）**、**Medium（100–399 人）**或 **Large（至少 400 人）**。分类结果可用于初步识别可能需要不同设施、人员配置或服务模式的学校群体，但不能替代教育部门的正式资源规划。
+
+整合后数据包含 **50,336 个学校—年份观测**。其中 47,828 个观测具有可用入学人数，三类有效观测分别约为 12,607、18,185 和 17,036。该数据明确满足 **Large、Messy、Integrated 和 Multi-class** 四项作业要求，不属于课程或 workshop 内置数据，不来自 Kaggle，也不涉及题目列出的禁用主题。
+
+# 研究问题与现实意义
+
+## 具体研究问题
+
+> 根据年份、学校教育阶段、地理与偏远程度及可用的学校层面社会教育背景信息，能够在多大程度上将 NSW 公立学校某一年的入学规模分类为 Small、Medium 或 Large？
+
+该问题是预测与数据规划问题，不是因果问题。模型不能证明偏远程度、社会教育背景或其他学校属性造成入学规模变化。
+
+## 利益相关者与决策用途
+
+潜在利益相关者包括 NSW Department of Education、学校管理者、地方社区、设施和交通规划人员，以及学生家庭。对学校规模进行一致分类可帮助：
+
+- 识别不同规模学校的长期分布和变化；
+- 为设施维护、教师招聘、学生支持和交通服务提供初步证据；
+- 检查偏远地区或特定教育阶段是否更常出现小规模学校；
+- 发现当前学校主数据与历史人数数据之间的链接和数据质量问题。
+
+模型结果不应自动决定学校关闭、合并、资金削减或人员配置。学校规模只是需求的一部分，实际决策还必须考虑学生需求、增长预测、当地人口、通学距离、课程范围和社区咨询。
+
+# 数据来源与可追溯性
+
+## 历年学生人数
+
+[NSW government school enrolments by head count](https://data.nsw.gov.au/data/dataset/nsw-education-nsw-government-school-enrolments-by-head-count) 由 NSW Department of Education 发布。官方说明，数据记录每所 NSW 公立学校自 2004 年起的学生人数；人数来自每年八月第一个星期五进行的 National Schools Statistics Collection（NSSC）。当一所学校不超过 5 名学生时，数值会被抑制；空值表示该年度没有采集到 NSSC 入学人数。
+
+本地文件：`headcount.csv`\
+SHA-256：
+
+``` text
+CEE66DE166698DBD6C54CB9A50F53913BECB926062C4F42A359B03735626F4BE
+```
+
+## 学校主数据
+
+[Master dataset: NSW government school locations and student enrolment numbers](https://data.nsw.gov.au/data/en/dataset/nsw-education-nsw-public-schools-master-dataset) 包含 NSW 公立学校的位置、学校类型、经纬度、当前人数、选区、偏远程度、ICSEA 和 FOEI 等信息。部分敏感比例在人数不超过 5 时以 `np` 抑制；小型学校、特殊教育学校和部分高中可能不公布 ICSEA。
+
+本地文件：`master_dataset.csv`\
+SHA-256：
+
+``` text
+ADC979FC553DAD794EDAD3FD1AAB0BA2D5727C19D72A4D7F5377227669D87FBE
+```
+
+两份文件均于 2026 年 9 月 3 日从 Data.NSW 下载，采用 Creative Commons Attribution 许可。由于开放数据会更新，复现时应使用本地文件和校验值，而不是假设未来下载内容完全一致。
+
+# 数据读取与整合
+
+```{r}
+#| label: setup
+#| include: false
+
+required_packages <- c("dplyr", "tidyr", "ggplot2", "scales", "knitr")
+missing_packages <- required_packages[
+  !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)
+]
+if (length(missing_packages) > 0) {
+  stop("渲染前请安装以下 R 包：", paste(missing_packages, collapse = ", "))
+}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(knitr)
+theme_set(theme_minimal(base_size = 12, base_family = "Arial Unicode MS"))
+```
+
+```{r}
+#| label: import-data
+
+enrolment_raw <- read.csv(
+  "headcount.csv",
+  check.names = FALSE,
+  stringsAsFactors = FALSE,
+  na.strings = c("", "NA", "np", "NP")
+)
+
+school_raw <- read.csv(
+  "master_dataset.csv",
+  check.names = FALSE,
+  stringsAsFactors = FALSE,
+  na.strings = c("", "NA", "np", "NP")
+)
+
+enrolment_wide <- enrolment_raw |>
+  rename(
+    School_code = `School Code`,
+    School_name_enrolment = `School Name`
+  )
+
+enrolment_long <- enrolment_wide |>
+  pivot_longer(
+    cols = starts_with("HC_"),
+    names_to = "year",
+    values_to = "headcount"
+  ) |>
+  mutate(
+    year = as.integer(sub("HC_", "", year)),
+    headcount = suppressWarnings(as.numeric(headcount))
+  )
+```
+
+## 链接过程
+
+链接键为两张表共同包含的学校代码。主数据中的字段名原本为 `School_code`，历史人数表中的字段名原本为 `School Code`；代码先统一名称，再以历史人数长表作为左表执行 `left_join()`。
+
+```{r}
+#| label: linkage
+
+stopifnot(!anyDuplicated(school_raw$School_code))
+
+school_year <- enrolment_long |>
+  left_join(
+    school_raw,
+    by = "School_code",
+    relationship = "many-to-one"
+  ) |>
+  mutate(
+    linked_to_master = !is.na(School_name),
+    size_class = cut(
+      headcount,
+      breaks = c(-Inf, 99, 399, Inf),
+      labels = c("Small (<100)", "Medium (100–399)", "Large (400+)"),
+      ordered_result = TRUE
+    )
+  )
+```
+
+使用 `relationship = "many-to-one"` 明确规定多个学校—年份记录只能匹配一个主数据记录；如果主数据出现重复学校代码，连接应报错，而不是悄悄复制数据行。
+
+```{r}
+#| label: linkage-audit
+
+linkage_summary <- tibble(
+  指标 = c(
+    "历史人数原始学校数", "主数据学校数", "学校—年份观测数",
+    "成功连接的观测数", "未连接的观测数", "成功连接率",
+    "连接前人数合计", "连接后人数合计"
+  ),
+  数值 = c(
+    n_distinct(enrolment_long$School_code),
+    n_distinct(school_raw$School_code),
+    nrow(school_year),
+    sum(school_year$linked_to_master),
+    sum(!school_year$linked_to_master),
+    percent(mean(school_year$linked_to_master), accuracy = 0.1),
+    sum(enrolment_long$headcount, na.rm = TRUE),
+    sum(school_year$headcount, na.rm = TRUE)
+  )
+)
+
+kable(linkage_summary, align = c("l", "r"))
+```
+
+连接前后人数总和应一致，这是一项关键的整合完整性检查。未匹配记录可能来自已关闭、更名或不再出现在当前主数据中的学校，不能直接删除；应比较其年份和人数分布，并在建模范围中明确处理。
+
+# 作业要求匹配度
+
+| 要求 | 是否满足 | 可复现证据 |
+|:---|:--:|:---|
+| Large | 是 | 宽表转为合理的学校—年份分析单位后有 50,336 行，其中 47,828 行目标有效 |
+| Messy | 是 | 历史人数包含抑制值和空值；主数据包含 `np`、结构性缺失及无法连接的历史学校 |
+| Integrated | 是 | 两份独立官方 CSV 通过 `School_code` 进行 many-to-one 链接，并审计匹配率及连接前后人数总和 |
+| Multi-class | 是 | 年度入学规模分为 Small、Medium、Large 三个类别 |
+| Complex | 不主张 | 整合后变量不足 100 个，不满足 Complex 的明确门槛 |
+
+该数据集明确满足四项要求，无需主张 `Complex`。
+
+# 探索性数据分析
+
+## 数据规模与变量类型
+
+```{r}
+#| label: dimensions-types
+
+type_summary <- tibble(
+  variable = names(school_year),
+  storage_type = vapply(
+    school_year,
+    function(x) paste(class(x), collapse = "/"),
+    character(1)
+  )
+) |>
+  count(storage_type, name = "变量数", sort = TRUE)
+
+kable(type_summary, col.names = c("R 存储类型", "变量数"))
+```
+
+主数据的大部分字段被 CSV 读取为字符型，但统计角色并不完全相同：学校教育阶段和偏远程度是类别变量，经纬度和人数是连续或计数变量，年份是时间变量，学校名称、电话和邮箱则属于标识或管理字段。建模前必须根据含义而不是 R 存储类型进行转换。
+
+## 缺失模式
+
+以下可视化同时展示各变量缺失比例，以及缺失较多变量在抽样观测中的共同出现模式。
+
+```{r}
+#| label: missing-summary
+
+missing_summary <- tibble(
+  variable = names(school_year),
+  missing_n = vapply(school_year, function(x) sum(is.na(x)), integer(1)),
+  missing_proportion = vapply(
+    school_year,
+    function(x) mean(is.na(x)),
+    numeric(1)
+  )
+) |>
+  arrange(desc(missing_proportion))
+
+kable(
+  missing_summary |>
+    slice_head(n = 20) |>
+    mutate(missing_proportion = percent(missing_proportion, accuracy = 0.1)),
+  col.names = c("变量", "缺失数", "缺失比例")
+)
+```
+
+```{r}
+#| label: missing-bar-plot
+#| fig-cap: "缺失比例最高的 20 个变量。`np` 和空字符串已在读取时统一转换为 NA。"
+
+missing_summary |>
+  slice_head(n = 20) |>
+  ggplot(aes(x = reorder(variable, missing_proportion),
+             y = missing_proportion)) +
+  geom_col(fill = "#2C7FB8") +
+  coord_flip() +
+  scale_y_continuous(labels = percent) +
+  labs(title = "整合数据中的变量缺失比例", x = NULL, y = "缺失比例")
+```
+
+```{r}
+#| label: missing-pattern-plot
+#| fig-cap: "缺失较多变量在 1,000 条学校—年份观测中的共现模式。"
+
+set.seed(5003)
+pattern_variables <- missing_summary |>
+  filter(missing_proportion > 0) |>
+  slice_head(n = 15) |>
+  pull(variable)
+
+missing_pattern <- school_year |>
+  slice_sample(n = min(1000, nrow(school_year))) |>
+  select(all_of(pattern_variables)) |>
+  mutate(across(everything(), is.na)) |>
+  mutate(sample_row = row_number()) |>
+  pivot_longer(-sample_row, names_to = "variable", values_to = "missing") |>
+  mutate(status = if_else(missing, "缺失", "已观测"))
+
+ggplot(
+  missing_pattern,
+  aes(x = sample_row,
+      y = factor(variable, levels = rev(pattern_variables)),
+      fill = status)
+) +
+  geom_raster() +
+  scale_fill_manual(values = c("缺失" = "#D73027", "已观测" = "#E8E8E8")) +
+  labs(title = "缺失值并非均匀随机分布", x = "抽样观测", y = NULL, fill = NULL) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+```
+
+缺失至少包含三种机制：小人数学校的隐私抑制、某年没有进行 NSSC 采集，以及特定学校类型不公布某项指标。不能将这些情况都视为普通随机缺失。对于 `headcount` 缺失，目标类别无法定义，应从监督学习样本中排除，但保留其数量和年度分布作为数据质量结果。
+
+## 多分类目标分布
+
+Small、Medium 和 Large 使用预先声明的固定阈值定义，而不是根据当前样本分位数反向选择。阈值应由小组在正式建模前确认，并在敏感性分析中检查改变阈值是否影响结论。
+
+```{r}
+#| label: class-distribution
+
+class_distribution <- school_year |>
+  filter(!is.na(size_class)) |>
+  count(size_class, name = "观测数") |>
+  mutate(比例 = 观测数 / sum(观测数))
+
+kable(
+  class_distribution |>
+    mutate(比例 = percent(比例, accuracy = 0.1)),
+  col.names = c("年度入学规模", "观测数", "比例")
+)
+```
+
+```{r}
+#| label: class-plot
+#| fig-cap: "47,828 个有效学校—年份观测的三分类目标分布。"
+
+ggplot(class_distribution,
+       aes(x = size_class, y = 观测数, fill = size_class)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(
+    aes(label = percent(比例, accuracy = 0.1)),
+    vjust = -0.4,
+    size = 3.5
+  ) +
+  scale_y_continuous(labels = comma,
+                     expand = expansion(mult = c(0, 0.1))) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(title = "三个学校规模类别相对平衡", x = NULL, y = "学校—年份观测数")
+```
+
+三类远比严重不平衡数据更容易建模，但仍应报告每类指标，尤其是 Small 类别。小型偏远学校即使学生人数少，也可能具有重要的教育可及性价值。
+
+## 入学人数随时间变化
+
+```{r}
+#| label: trend-plot
+#| fig-cap: "2004–2025 年各入学规模类别的学校记录数量。"
+
+school_year |>
+  filter(!is.na(size_class)) |>
+  count(year, size_class) |>
+  ggplot(aes(year, n, colour = size_class)) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 1.5) +
+  scale_x_continuous(breaks = seq(2004, 2025, by = 2)) +
+  scale_y_continuous(labels = comma) +
+  labs(
+    title = "学校规模构成随年份变化",
+    x = "年份", y = "学校数", colour = "入学规模"
+  )
+```
+
+同一学校跨年份的观测高度相关，因此不能将 50,336 行当作完全独立的样本。随机拆分行会让同一学校同时出现在训练集和测试集，导致模型记住学校特征并高估泛化性能。
+
+# 数据准备与目标泄漏
+
+## 需要排除或谨慎使用的字段
+
+- `latest_year_enrolment_FTE` 与目标人数高度接近，预测历史或当前规模时会产生信息泄漏，应排除。
+- 学校名称、地址、电话、邮箱、网址、传真和 `AgeID` 属于标识信息，不应作为预测变量。
+- `School_subtype` 可能几乎直接编码教育阶段或规模，应在使用前审计。
+- `Date_extracted` 是数据发布管理字段，不是学校的稳定属性。
+- 当前主数据属性被连接到所有历史年份；可能随时间变化的属性不能被错误解释为当年的真实值。
+
+## 推荐的分析数据
+
+1.  只保留 `headcount` 非缺失且成功连接主数据的学校—年份记录。
+2.  将教育阶段、学校性别、偏远程度、地区、选择性学校等转换为 factor。
+3.  将 `Indigenous_pct`、`LBOTE_pct`、`ICSEA_value`、`FOEI_Value`、经纬度等安全转换为数值，并审计转换失败。
+4.  删除直接或间接泄漏目标的最新人数、名称及联系信息。
+5.  对高基数地区变量进行合理层级选择，不使用完整地址记忆个别学校。
+6.  所有缺失插补、稀有类别合并和标准化参数只在训练数据中估计。
+
+# 验证与建模计划
+
+## 数据拆分
+
+主要验证应按 `School_code` 分组，使任何学校只出现在训练集或测试集之一。这样评价的是模型对未见学校的泛化能力。可以采用：
+
+- 按学校分组的 80/20 训练—测试划分；
+- 训练集内部按学校分组的交叉验证；
+- 以 `size_class` 进行近似分层，避免测试集类别比例异常。
+
+另一种有意义的任务是用 2004–2023 年训练、2024–2025 年测试，评价未来年份表现。但在这种时间拆分中同一学校会跨集合出现，回答的是“已知学校未来年份”而不是“新学校”问题。两种结果应分别命名，不能混为一谈。
+
+## 候选模型
+
+- 多数类别分类器，作为最低基线；
+- 多项 Logistic 回归，作为可解释基线；
+- 正则化多项 Logistic 回归，处理相关预测变量；
+- Random Forest 或 gradient boosting，捕捉非线性和交互。
+
+## 评价指标
+
+- accuracy；
+- Macro F1 和 balanced accuracy；
+- 每类 precision、recall 和 F1；
+- 三分类 confusion matrix；
+- 按偏远程度、教育阶段和地区分组的错误率。
+
+由于类别具有 Small–Medium–Large 的顺序，还可以补充加权 Cohen's kappa 或平均绝对等级误差，以区分相邻类别错误和跨两级错误。
+
+# 局限与伦理考虑
+
+## 数据局限
+
+- 数据仅覆盖 NSW 公立学校，不代表私立和天主教学校。
+- 历史人数表与当前学校主数据的时间基准不同。
+- 小人数被抑制，缺失并非随机。
+- 关闭或更名学校可能无法与当前主数据连接。
+- 固定规模阈值是分析定义，不是 NSW Department of Education 的正式分类。
+- 学校人数不能单独代表教育质量、资源需求或社区价值。
+
+## 伦理与公平性
+
+小型学校往往服务偏远社区、特殊需求学生或特定教育阶段。将 Small 解释为低效率会造成严重误导。模型必须作为描述和规划辅助工具，不能自动触发关闭、合并或削减资源。对于 Indigenous 比例等字段，必须尊重官方隐私抑制，不得试图反推被隐藏的小样本值。分组性能应检查模型是否系统性误判偏远、特殊教育或弱势社区学校。
+
+# 总体建议
+
+NSW 公立学校数据是比道路事故数据更稳妥的澳大利亚候选方案。它完全避开作业禁止主题，通过两份官方数据的可复现链接明确满足 **Integrated**，转换为合理的学校—年份分析单位后满足 **Large**，隐私抑制和结构性缺失满足 **Messy**，三个年度入学规模类别满足 **Multi-class**。其主要统计挑战是重复学校观测、非随机缺失、当前主数据与历史年份的时间错位，以及最新人数造成的目标泄漏。这些问题能够自然支持有深度的 EDA 和建模决策讨论。
+
+# 参考文献
+
+NSW Department of Education. (2026). *NSW government school enrolments by head count (2004–2025)*. Data.NSW. <https://data.nsw.gov.au/data/dataset/nsw-education-nsw-government-school-enrolments-by-head-count>
+
+NSW Department of Education. (2026). *Master dataset: NSW government school locations and student enrolment numbers*. Data.NSW. <https://data.nsw.gov.au/data/en/dataset/nsw-education-nsw-public-schools-master-dataset>

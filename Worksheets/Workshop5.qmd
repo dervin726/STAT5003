@@ -1,0 +1,379 @@
+---
+title: "Workshop 5"
+author: "zwx"
+format: html
+editor: visual
+---
+
+## Lecture Notes
+
+## Workshop Exercises
+
+## Hierarchical Clustering
+
+The rows of `movielens_top40.csv` are movies and the columns are users. Therefore, clustering the rows groups movies according to the similarity of their user-rating profiles.
+
+### Read and inspect the ratings
+
+```{r}
+# Movie titles are stored in the first column, so use them as row names
+ratings <- read.csv(
+  "../Datasets/movielens_top40.csv",
+  row.names = 1,
+  check.names = FALSE
+)
+
+dim(ratings)
+ratings[1:5, 1:6]
+```
+
+The data contain 40 movies and 153 user-rating variables. All ratings use the same measurement scale, so the variables do not need to be standardised before calculating distances.
+
+### Calculate dissimilarities
+
+We use Euclidean distance between the movies. Some users did not rate every movie, so the data contain `NA` values. The base R `dist()` function calculates each pairwise distance from the ratings available for that pair and rescales it to account for the missing components.
+
+```{r}
+movie_dist <- dist(ratings, method = "euclidean")
+
+# Check that a finite distance was obtained for every pair of movies
+stopifnot(all(is.finite(movie_dist)))
+```
+
+### Apply three linkage methods
+
+```{r}
+hc_complete <- hclust(movie_dist, method = "complete")
+hc_average  <- hclust(movie_dist, method = "average")
+hc_single   <- hclust(movie_dist, method = "single")
+```
+
+Here, the dissimilarity measure remains Euclidean distance. The arguments `"complete"`, `"average"`, and `"single"` specify different **linkage methods**---that is, different rules for measuring the separation between two clusters.
+
+### Plot the dendrograms
+
+```{r}
+old_par <- par(
+  mfrow = c(1, 3),
+  mar = c(11, 4, 3, 1)
+)
+
+plot(
+  hc_complete,
+  main = "Complete linkage",
+  xlab = "",
+  sub = "",
+  ylab = "Height",
+  cex = 0.45,
+  hang = -1
+)
+
+plot(
+  hc_average,
+  main = "Average linkage",
+  xlab = "",
+  sub = "",
+  ylab = "Height",
+  cex = 0.45,
+  hang = -1
+)
+
+plot(
+  hc_single,
+  main = "Single linkage",
+  xlab = "",
+  sub = "",
+  ylab = "Height",
+  cex = 0.45,
+  hang = -1
+)
+
+par(old_par)
+```
+
+### Compare the results
+
+- **Complete linkage** uses the largest distance between members of two clusters. It tends to produce compact, clearly separated groups and has the largest final merge height in these data.
+- **Average linkage** uses the average pairwise distance between clusters. Its dendrogram is less extreme than the complete-linkage result and gives a compromise between compactness and flexibility.
+- **Single linkage** uses the smallest distance between two clusters. It shows a strong *chaining effect*: most movies join one large cluster through a sequence of locally similar movies, while a few movies remain separate until later merges.
+
+The broad groupings are similar in places, but the exact membership and merge heights change because each linkage method defines inter-cluster distance differently. For these movie ratings, complete and average linkage reveal more distinct groups, whereas single linkage gives relatively weak cluster separation. The result should also be interpreted cautiously because missing ratings mean that different movie pairs may be compared using different subsets of users.
+
+We can inspect a four-cluster solution from each dendrogram:
+
+```{r}
+cluster_membership <- data.frame(
+  movie = rownames(ratings),
+  complete = cutree(hc_complete, k = 4),
+  average = cutree(hc_average, k = 4),
+  single = cutree(hc_single, k = 4),
+  row.names = NULL
+)
+
+cluster_membership
+```
+
+## Form Clusters
+
+### 1. Separate the movies into four clusters
+
+The following code repeats the complete-linkage analysis and cuts its dendrogram into exactly four clusters.
+
+```{r}
+# Read the movie-by-user rating matrix
+ratings <- read.csv(
+  "../Datasets/movielens_top40.csv",
+  row.names = 1,
+  check.names = FALSE
+)
+
+# Calculate movie dissimilarities and fit complete-linkage clustering
+movie_dist <- dist(ratings, method = "euclidean")
+hc_complete <- hclust(movie_dist, method = "complete")
+
+# Assign each movie to one of four clusters
+complete_clusters_4 <- cutree(hc_complete, k = 4)
+
+complete_clusters_4
+table(complete_clusters_4)
+```
+
+The result is a named integer vector: each name is a movie title and its value is the cluster number assigned to that movie.
+
+### 2. Extract the movies in cluster 1
+
+```{r}
+cluster_1_movies <- names(
+  complete_clusters_4[complete_clusters_4 == 1]
+)
+
+cluster_1_movies
+```
+
+For these data, cluster 1 contains:
+
+- *Aladdin (1992)*
+- *Back to the Future (1985)*
+- *The Lion King (1994)*
+- *Shrek (2001)*
+- *Toy Story (1995)*
+
+Cluster numbers are only labels; cluster 1 is not inherently better or more important than the other clusters.
+
+### 3. Cut the tree at a specified height
+
+With 40 movies, four clusters remain after $40-4=36$ merges. The 36th merge occurs at height 15.6325, and the next merge occurs at 16.3484. Therefore, any height strictly between these two values produces four clusters. A convenient choice is $h=16$.
+
+```{r}
+cut_height <- 16
+
+# Cut by height instead of specifying k
+complete_clusters_h <- cutree(
+  hc_complete,
+  h = cut_height
+)
+
+complete_clusters_h
+table(complete_clusters_h)
+
+# Confirm that both approaches give the same grouping
+identical(complete_clusters_4, complete_clusters_h)
+```
+
+The final check returns `TRUE`. We can display the selected cut on the dendrogram:
+
+```{r}
+plot(
+  hc_complete,
+  main = "Complete-linkage clustering of movies",
+  xlab = "",
+  sub = "",
+  ylab = "Height",
+  cex = 0.55,
+  hang = -1
+)
+
+abline(h = cut_height, col = "red", lty = 2, lwd = 2)
+rect.hclust(hc_complete, k = 4, border = 2:5)
+```
+
+## Real Clustering?
+
+This analysis ignores the rating values and retains only whether each user rated each movie. A value of 1 means that a rating is present, while 0 means that the rating is missing.
+
+### 1. Create the binary rating-presence dataset
+
+```{r}
+# TRUE for an observed rating and FALSE for a missing rating;
+# multiplying by 1 converts these values to 1 and 0
+movielens_mat <- 1 * !is.na(ratings)
+
+# Preserve the movie titles as row names
+rownames(movielens_mat) <- rownames(ratings)
+
+movielens_mat[1:5, 1:10]
+```
+
+This directly performs both requested replacements: every `NA` becomes 0 and every observed rating, regardless of whether it was 1 or 5 stars, becomes 1.
+
+### 2. Perform hierarchical clustering with Manhattan distance
+
+For binary data, the Manhattan distance between two rows is the number of users for whom the two movies have different rating-presence indicators.
+
+```{r}
+presence_dist <- dist(
+  movielens_mat,
+  method = "manhattan"
+)
+
+presence_hc <- hclust(
+  presence_dist,
+  method = "complete"
+)
+
+plot(
+  presence_hc,
+  main = "Clustering based on the presence of ratings",
+  xlab = "",
+  sub = "Manhattan distance and complete linkage",
+  ylab = "Height",
+  cex = 0.55,
+  hang = -1
+)
+```
+
+Complete linkage is retained so that the main structural change is the use of rating presence instead of rating values, although the distance measure also changes from Euclidean to Manhattan as requested.
+
+### 3. Find four clusters
+
+```{r}
+presence_clusters_4 <- cutree(
+  presence_hc,
+  k = 4
+)
+
+presence_clusters_4
+table(presence_clusters_4)
+```
+
+The numbers of movies in the four new clusters are 4, 10, 20, and 6. These differ from the previous complete-linkage result of 5, 22, 6, and 7.
+
+### 4. Compare with the previous clustering
+
+Cluster labels are arbitrary, so equal label numbers do not necessarily identify corresponding groups. A cross-tabulation gives a more useful comparison of how movies move between the two solutions.
+
+```{r}
+cluster_comparison <- table(
+  Rating_values = complete_clusters_4,
+  Rating_presence = presence_clusters_4
+)
+
+cluster_comparison
+```
+
+For example, extract cluster 1 from each result:
+
+```{r}
+rating_cluster_1 <- names(
+  complete_clusters_4[complete_clusters_4 == 1]
+)
+
+presence_cluster_1 <- names(
+  presence_clusters_4[presence_clusters_4 == 1]
+)
+
+rating_cluster_1
+presence_cluster_1
+
+# Movies shared by the two cluster-1 groups
+intersect(rating_cluster_1, presence_cluster_1)
+```
+
+The original rating-value cluster 1 contains *Aladdin*, *Back to the Future*, *The Lion King*, *Shrek*, and *Toy Story*. The new rating-presence cluster 1 contains *Aladdin*, *Apollo 13*, *Dances with Wolves*, and *The Lion King*. Only *Aladdin* and *The Lion King* occur in both groups.
+
+The substantial change in cluster sizes and membership shows that the original clustering was not based only on whether ratings were present. The rating values carry information that affects the Euclidean distances and hence the groups. However, this comparison changes both the data representation and the distance measure, so the differences cannot be attributed exclusively to rating values; Manhattan rather than Euclidean distance may also contribute.
+
+## K-Means Clustering
+
+The `kmeans()` function cannot work with missing values. For this exercise, we replace each missing rating with 0 while leaving every observed rating unchanged.
+
+### Prepare the data and fit four clusters
+
+```{r}
+# Start again from the original ratings rather than the binary matrix
+movielens_mat <- as.matrix(ratings)
+movielens_mat[is.na(movielens_mat)] <- 0
+
+# Check that there are no missing values left
+stopifnot(!anyNA(movielens_mat))
+
+# Use a fixed seed and several random starts for a reproducible solution
+set.seed(5003)
+
+movie_kmeans <- kmeans(
+  movielens_mat,
+  centers = 4,
+  nstart = 25
+)
+
+# Number of movies assigned to each cluster
+movie_kmeans$size
+table(movie_kmeans$cluster)
+```
+
+With `set.seed(5003)` and `nstart = 25`, the four clusters contain 15, 10, 9, and 6 movies. Cluster numbers are arbitrary labels and can change under a different random initialisation, even when the underlying groups are similar.
+
+### Perform principal component analysis
+
+The columns represent users. Setting `scale. = TRUE` standardises each user's ratings so that columns with greater variability do not dominate the PCA.
+
+```{r}
+movie_pca <- prcomp(
+  movielens_mat,
+  center = TRUE,
+  scale. = TRUE
+)
+
+summary(movie_pca)
+```
+
+In this result, PC1 explains approximately 15.8% of the total variance and PC2 explains approximately 9.2%; together they explain about 25.0%. Consequently, the two-dimensional plot is a useful summary, but it cannot display all the separation used by k-means in the original 153-dimensional space.
+
+### Create the plotting data frame
+
+```{r}
+movie.df <- data.frame(
+  Movie = rownames(movielens_mat),
+  PC1 = movie_pca$x[, 1],
+  PC2 = movie_pca$x[, 2],
+  Cluster = factor(movie_kmeans$cluster),
+  row.names = NULL
+)
+
+head(movie.df)
+```
+
+Converting `Cluster` to a factor tells `ggplot()` to use distinct colours rather than treating the cluster numbers as a continuous numerical scale.
+
+### Plot the first two principal components
+
+```{r}
+library(ggplot2)
+
+ggplot(
+  movie.df,
+  aes(x = PC1, y = PC2, colour = Cluster)
+) +
+  geom_point(size = 3, alpha = 0.85) +
+  labs(
+    title = "K-means clusters of MovieLens movies",
+    subtitle = "PCA projection of the zero-filled rating matrix",
+    x = "Principal component 1 (15.8%)",
+    y = "Principal component 2 (9.2%)",
+    colour = "K-means cluster"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = "right")
+```
+
+The colours show the k-means assignments, whereas the point positions show only their projection onto PC1 and PC2. Points of different colours may therefore overlap in this plot even though k-means separates them using all 153 user-rating dimensions. Treating a missing rating as 0 is also a simplifying assumption: it makes the computation possible but can cause missingness patterns to influence the clusters.

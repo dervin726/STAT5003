@@ -1,0 +1,679 @@
+---
+title: "Workshop 4"
+author: "zwx"
+format: html
+editor: visual
+---
+
+## Lecture Notes
+
+This workshop uses simulation to illustrate reproducible random-number generation and maximum likelihood estimation for a normal distribution.
+
+## Parametric Density Estimation
+
+### Reproducible random number generation
+
+Random samples normally change each time a program is run. `set.seed()` fixes the initial state of R's pseudo-random number generator, so the same sequence of calls produces the same values. This makes an analysis reproducible for collaborators and markers.
+
+We use the unit code, 5003, as the seed throughout this workshop.
+
+### Basic Gaussian simulation
+
+Generate 100 observations from a normal distribution with mean $10$ and standard deviation $10$:
+
+```{r}
+set.seed(5003)
+
+x <- rnorm(
+  n = 100,
+  mean = 10,
+  sd = 10
+)
+
+# Inspect the sample
+head(x)
+mean(x)
+sd(x)
+```
+
+The generated sample has a sample mean of approximately 11.401 and a sample standard deviation of approximately 10.050. These are not required to equal the population parameters exactly because of sampling variability.
+
+### Histogram of the simulated sample
+
+```{r}
+hist(
+  x,
+  breaks = "Sturges",
+  probability = TRUE,
+  col = "lightblue",
+  border = "white",
+  main = "100 observations from N(10, 10^2)",
+  xlab = "Simulated value"
+)
+
+# Add the theoretical normal density
+curve(
+  dnorm(x, mean = 10, sd = 10),
+  add = TRUE,
+  col = "red",
+  lwd = 2
+)
+```
+
+The histogram is an empirical representation of the sample, while the red curve is the density of the population $N(10,10^2)$. With only 100 observations, the histogram will not follow the theoretical curve perfectly.
+
+### Verify reproducibility
+
+```{r}
+set.seed(5003)
+x_first <- rnorm(100, mean = 10, sd = 10)
+
+set.seed(5003)
+x_second <- rnorm(100, mean = 10, sd = 10)
+
+# TRUE means every generated value is identical
+identical(x_first, x_second)
+```
+
+The result is `TRUE`. Resetting the seed to 5003 before making the same `rnorm()` call produces the same sample and therefore the same histogram. Setting the seed only once and then calling `rnorm()` repeatedly would instead produce successive, different samples from one reproducible random-number sequence.
+
+## Log Likelihood
+
+Suppose $x_1,\ldots,x_n$ are independent and identically distributed observations from a normal distribution with mean $\mu$ and variance $\sigma^2$. The likelihood is
+
+$$L(\mu,\sigma;x)
+= \prod_{i=1}^{n}
+\frac{1}{\sqrt{2\pi\sigma^2}}
+\exp\left\{-\frac{(x_i-\mu)^2}{2\sigma^2}\right\}.$$
+
+Taking logarithms converts the product into a sum:
+
+$$\ell(\mu,\sigma;x)
+= -\frac{n}{2}\log(2\pi\sigma^2)
+- \frac{1}{2\sigma^2}\sum_{i=1}^{n}(x_i-\mu)^2.$$
+
+The parameter value that maximises the log likelihood also maximises the likelihood because the logarithm is strictly increasing.
+
+### 1. Generate the observations
+
+The object `x` generated above contains the required 100 observations from
+
+$$X_i \sim N(\mu=10,\sigma=10).$$
+
+The seed is reset below so this section can also be run independently.
+
+```{r}
+set.seed(5003)
+x <- rnorm(100, mean = 10, sd = 10)
+
+length(x)
+```
+
+### 2. Calculate the log likelihood for candidate means
+
+Keep $\sigma=10$ fixed and evaluate the log likelihood for integer values of $\mu$ from 1 to 20.
+
+```{r}
+mu_values <- 1:20
+sigma <- 10
+
+# Implement the normal log-likelihood formula directly
+log_likelihood <- function(mu, data, sigma) {
+  n <- length(data)
+
+  -n / 2 * log(2 * pi * sigma^2) -
+    sum((data - mu)^2) / (2 * sigma^2)
+}
+
+log_lik_values <- sapply(
+  mu_values,
+  log_likelihood,
+  data = x,
+  sigma = sigma
+)
+
+likelihood_results <- data.frame(
+  mu = mu_values,
+  log_likelihood = log_lik_values
+)
+
+likelihood_results
+```
+
+R can also calculate the same quantity by summing the log densities returned by `dnorm(..., log = TRUE)`:
+
+```{r}
+log_lik_check <- sapply(
+  mu_values,
+  function(mu) sum(dnorm(x, mean = mu, sd = sigma, log = TRUE))
+)
+
+all.equal(log_lik_values, log_lik_check)
+```
+
+### 3. Plot the log likelihood and find the MLE
+
+```{r}
+grid_mle <- mu_values[which.max(log_lik_values)]
+exact_mle <- mean(x)
+
+plot(
+  mu_values,
+  log_lik_values,
+  type = "b",
+  pch = 16,
+  col = "steelblue",
+  main = expression("Normal log likelihood with " * sigma == 10),
+  xlab = expression(mu),
+  ylab = "Log likelihood"
+)
+
+# Best value among the candidate integers
+abline(v = grid_mle, col = "red", lty = 2, lwd = 2)
+
+# Unrestricted analytical MLE
+abline(v = exact_mle, col = "darkgreen", lty = 3, lwd = 2)
+
+legend(
+  "bottomright",
+  legend = c(
+    paste("Grid MLE =", grid_mle),
+    paste("Exact MLE =", round(exact_mle, 3))
+  ),
+  col = c("red", "darkgreen"),
+  lty = c(2, 3),
+  lwd = 2,
+  bty = "n"
+)
+
+grid_mle
+exact_mle
+```
+
+The largest evaluated log likelihood occurs at $\mu=11$, so the maximum likelihood estimate **among the specified integer candidates** is
+
+$$\widehat{\mu}_{\mathrm{grid}}=11.$$
+
+For a normal distribution with fixed $\sigma$, differentiating the log likelihood gives
+
+$$\frac{\partial\ell}{\partial\mu}
+= \frac{1}{\sigma^2}\sum_{i=1}^{n}(x_i-\mu).$$
+
+Setting this derivative equal to zero gives the unrestricted maximum likelihood estimator
+
+$$\widehat{\mu}=\bar{x}.$$
+
+For this reproducible sample, $\bar{x}\approx11.401$. The integer-grid estimate is 11 because it is the candidate integer closest to the sample mean. The true population mean used to simulate the data was 10, but an estimate from a finite random sample will generally differ from the true value.
+
+## Part I Summary
+
+- `set.seed(5003)` makes the simulated analysis reproducible.
+- The sample contains 100 observations drawn from $N(10,10^2)$.
+- With $\sigma=10$ fixed, the log likelihood is maximised by minimising the sum of squared deviations from $\mu$.
+- The MLE over the requested integer grid is $\widehat{\mu}=11$.
+- The unrestricted MLE is the sample mean, $\widehat{\mu}=\bar{x}\approx11.401$.
+
+## Parametric Density Estimation II
+
+This section compares histograms, kernel density estimators and a fitted Gaussian model for a sample of human heights.
+
+### Load and inspect the height data
+
+Place `height.csv` in the `Datasets` directory. The following code reads the file relative to this QMD document, checks that the required variable exists, and removes observations with missing heights.
+
+```{r}
+height_file <- "../Datasets/height.csv"
+
+if (!file.exists(height_file)) {
+  stop("Add height.csv to the Datasets directory before running this section.")
+}
+
+heights <- read.csv(height_file)
+
+if (!"Height_m" %in% names(heights)) {
+  stop("height.csv must contain a column named Height_m.")
+}
+
+heights <- heights[!is.na(heights$Height_m), ]
+
+head(heights)
+summary(heights$Height_m)
+nrow(heights)
+```
+
+### a) Histograms with different numbers of bins
+
+For a probability-density histogram, the total **area** of the bars is 1. In base R, `probability = TRUE` (equivalently, `freq = FALSE`) puts density rather than frequency on the vertical axis.
+
+```{r}
+bin_counts <- c(5, 10, 20)
+
+old_par <- par(mfrow = c(1, 3))
+
+for (number_of_bins in bin_counts) {
+  hist(
+    heights$Height_m,
+    breaks = number_of_bins,
+    probability = TRUE,
+    col = "lightblue",
+    border = "white",
+    main = paste(number_of_bins, "bins"),
+    xlab = "Height (m)",
+    ylab = "Density"
+  )
+}
+
+par(old_par)
+```
+
+With 5 bins, the histogram is relatively smooth but may hide important structure. With 20 bins, it shows more detail but is also more sensitive to sampling variation and the placement of the bin boundaries. The 10-bin display is an intermediate compromise. This illustrates that a histogram's appearance depends on a subjective choice of bin width.
+
+### b) Kernel density estimation
+
+A kernel density estimator replaces histogram bars with smooth contributions centred on each observation:
+
+$$\widehat f_h(x)
+=\frac{1}{nh}\sum_{i=1}^{n}
+K\left(\frac{x-x_i}{h}\right),$$
+
+where $K$ is the kernel function and $h$ is the bandwidth. The kernel controls the shape of each local contribution, while the bandwidth controls the amount of smoothing.
+
+The following loop estimates and plots the density using Gaussian, Epanechnikov and triangular kernels. Because no `bw` argument is supplied, R uses its default data-driven bandwidth rule for each call.
+
+```{r}
+kernels <- c("gaussian", "epanechnikov", "triangular")
+
+old_par <- par(mfrow = c(1, 3))
+
+for (current_kernel in kernels) {
+  density_estimate <- density(
+    heights$Height_m,
+    kernel = current_kernel
+  )
+
+  plot(
+    density_estimate,
+    lwd = 2,
+    col = "steelblue",
+    xlab = "Height (m)",
+    main = paste("Density using", current_kernel)
+  )
+
+  rug(heights$Height_m, col = rgb(0, 0, 0, 0.3))
+}
+
+par(old_par)
+```
+
+To make the kernel shapes easier to compare, they can also be drawn on the same axes. Here the same bandwidth is used for all three estimates, ensuring that visible differences are caused by the kernel rather than by different smoothing levels.
+
+```{r}
+common_bandwidth <- bw.nrd0(heights$Height_m)
+
+kernel_estimates <- lapply(
+  kernels,
+  function(current_kernel) {
+    density(
+      heights$Height_m,
+      kernel = current_kernel,
+      bw = common_bandwidth
+    )
+  }
+)
+
+plot(
+  kernel_estimates[[1]],
+  lwd = 2,
+  col = "red",
+  xlab = "Height (m)",
+  main = "Comparison of kernel density estimates"
+)
+lines(kernel_estimates[[2]], lwd = 2, col = "darkgreen")
+lines(kernel_estimates[[3]], lwd = 2, col = "purple")
+
+legend(
+  "topright",
+  legend = c("Gaussian", "Epanechnikov", "Triangular"),
+  col = c("red", "darkgreen", "purple"),
+  lwd = 2,
+  bty = "n"
+)
+```
+
+The three curves should be broadly similar. In most applications, the bandwidth has a much larger influence on the estimate than the choice among these standard kernels.
+
+### c) Estimate the probability of a height above 1.7 m
+
+For a continuous density, the required probability is the area under the estimated density to the right of 1.7:
+
+$$\widehat P(X>1.7)
+=\int_{1.7}^{\infty}\widehat f_h(x)\,dx.$$
+
+`density()` returns estimated values on a finite grid. `approxfun()` turns those grid points into an interpolating function, and `integrate()` calculates the area. The Gaussian KDE is used here.
+
+```{r}
+height_kde <- density(
+  heights$Height_m,
+  kernel = "gaussian"
+)
+
+# rule = 2 allows evaluation at a boundary of the density grid
+height_density_function <- approxfun(
+  height_kde$x,
+  height_kde$y,
+  rule = 2
+)
+
+probability_above_1_7 <- integrate(
+  height_density_function,
+  lower = 1.7,
+  upper = max(height_kde$x)
+)
+
+probability_above_1_7
+probability_above_1_7$value
+```
+
+The integration stops at the upper end of the grid returned by `density()`, where the estimated density is already close to zero. For the workshop height data, the estimated probability should be approximately 0.431, meaning that the KDE estimates about 43.1% of people to be taller than 1.7 m.
+
+### d) Gaussian maximum likelihood estimates
+
+If the observations are assumed to follow $N(\mu,\sigma^2)$, their log likelihood is
+
+$$\ell(\mu,\sigma)
+=-\frac{n}{2}\log(2\pi\sigma^2)
+-\frac{1}{2\sigma^2}\sum_{i=1}^{n}(x_i-\mu)^2.$$
+
+`stats4::mle()` minimises a negative log-likelihood function. Optimising `log_sigma` rather than `sigma` guarantees that the fitted standard deviation remains positive.
+
+```{r}
+normal_negative_log_likelihood <- function(mu, log_sigma) {
+  sigma <- exp(log_sigma)
+
+  -sum(
+    dnorm(
+      heights$Height_m,
+      mean = mu,
+      sd = sigma,
+      log = TRUE
+    )
+  )
+}
+
+height_fit <- stats4::mle(
+  minuslogl = normal_negative_log_likelihood,
+  start = list(
+    mu = mean(heights$Height_m),
+    log_sigma = log(sd(heights$Height_m))
+  )
+)
+
+height_coefficients <- stats4::coef(height_fit)
+
+mu_mle <- unname(height_coefficients["mu"])
+sigma_mle <- exp(unname(height_coefficients["log_sigma"]))
+
+c(mu_mle = mu_mle, sigma_mle = sigma_mle)
+
+# Use the stats4 S4 method explicitly. This avoids a masked summary()
+# function treating the mle object like a regular list.
+stats4::summary(height_fit)
+```
+
+The same estimates have closed-form expressions:
+
+$$\widehat\mu=\bar{x},
+\qquad
+\widehat\sigma
+=\sqrt{\frac{1}{n}\sum_{i=1}^{n}(x_i-\bar{x})^2}.$$
+
+```{r}
+mu_mle_closed <- mean(heights$Height_m)
+
+sigma_mle_closed <- sqrt(
+  mean((heights$Height_m - mu_mle_closed)^2)
+)
+
+c(
+  mu_mle_closed = mu_mle_closed,
+  sigma_mle_closed = sigma_mle_closed
+)
+
+all.equal(mu_mle, mu_mle_closed)
+all.equal(sigma_mle, sigma_mle_closed)
+```
+
+For the workshop data, the estimates should be approximately
+
+$$\widehat\mu=1.6818\text{ m},
+\qquad
+\widehat\sigma=0.08084\text{ m}.$$
+
+Notice that the MLE of $\sigma$ uses the divisor $n$. The usual `sd()` function uses $n-1$, so its result is slightly larger.
+
+## Bandwidth Selection
+
+The bandwidth $h$ controls how strongly a kernel density estimate is smoothed. When the true density $f(x)$ is known in a simulation, the accuracy of an estimated density $\widehat f(x;h)$ can be measured using the **Integrated Squared Error**:
+
+$$\operatorname{ISE}(h)
+=\int_{-\infty}^{\infty}
+\left(\widehat f(x;h)-f(x)\right)^2\,dx.$$
+
+ISE is non-negative. A smaller value means that the estimated density is closer to the true density over the whole range of $x$.
+
+### Simulate data with a known density
+
+To calculate ISE, we need to know the true density. Generate 100 observations from the standard normal distribution, for which $f(x)=\phi(x)$ is available through `dnorm()`.
+
+```{r}
+set.seed(5003)
+
+bandwidth_sample <- rnorm(
+  n = 100,
+  mean = 0,
+  sd = 1
+)
+
+head(bandwidth_sample)
+```
+
+### Calculate ISE for one bandwidth
+
+The integral is approximated on a fine, equally spaced grid. If adjacent grid points are separated by $\Delta x$, then
+
+$$\operatorname{ISE}(h)
+\approx \sum_j
+\left(\widehat f(x_j;h)-f(x_j)\right)^2\Delta x.$$
+
+```{r}
+calculate_ise <- function(data, bandwidth) {
+  density_estimate <- density(
+    data,
+    bw = bandwidth,
+    kernel = "gaussian",
+    from = -4,
+    to = 4,
+    n = 2048
+  )
+
+  true_density <- dnorm(
+    density_estimate$x,
+    mean = 0,
+    sd = 1
+  )
+
+  grid_width <- density_estimate$x[2] - density_estimate$x[1]
+
+  sum(
+    (density_estimate$y - true_density)^2
+  ) * grid_width
+}
+
+calculate_ise(bandwidth_sample, bandwidth = 0.5)
+```
+
+Multiplication by `grid_width` is important: without it, the code calculates only a sum of squared differences, whose magnitude changes with the number of grid points, rather than approximating the integral.
+
+### Search for the optimal bandwidth
+
+Evaluate candidate bandwidths from 0.05 to 1.50 and choose the value with the smallest ISE.
+
+```{r}
+bandwidth_values <- seq(
+  from = 0.05,
+  to = 1.50,
+  by = 0.01
+)
+
+ise_values <- sapply(
+  bandwidth_values,
+  function(current_bandwidth) {
+    calculate_ise(
+      bandwidth_sample,
+      bandwidth = current_bandwidth
+    )
+  }
+)
+
+bandwidth_results <- data.frame(
+  bandwidth = bandwidth_values,
+  ISE = ise_values
+)
+
+best_position <- which.min(bandwidth_results$ISE)
+optimal_bandwidth <- bandwidth_results$bandwidth[best_position]
+minimum_ise <- bandwidth_results$ISE[best_position]
+
+c(
+  optimal_bandwidth = optimal_bandwidth,
+  minimum_ISE = minimum_ise
+)
+```
+
+For the sample generated with `set.seed(5003)`, the best value on this candidate grid is approximately
+
+$$h_{\mathrm{optimal}}=0.44,
+\qquad
+\operatorname{ISE}_{\min}=0.00782.$$
+
+The selected value is specific to this simulated sample, the search grid and the chosen integration range.
+
+### Plot ISE against bandwidth
+
+```{r}
+plot(
+  bandwidth_results$bandwidth,
+  bandwidth_results$ISE,
+  type = "l",
+  lwd = 2,
+  col = "steelblue",
+  main = "Bandwidth selection using ISE",
+  xlab = "Bandwidth (h)",
+  ylab = "Integrated Squared Error"
+)
+
+abline(
+  v = optimal_bandwidth,
+  col = "red",
+  lty = 2,
+  lwd = 2
+)
+
+points(
+  optimal_bandwidth,
+  minimum_ise,
+  pch = 19,
+  col = "red"
+)
+
+legend(
+  "topright",
+  legend = paste("Minimum at h =", optimal_bandwidth),
+  col = "red",
+  lty = 2,
+  pch = 19,
+  bty = "n"
+)
+```
+
+The curve is generally U-shaped. ISE is large at both extremely small and extremely large bandwidths, with an intermediate bandwidth giving the best balance.
+
+### Compare under-smoothing, optimal smoothing and over-smoothing
+
+```{r}
+comparison_bandwidths <- c(
+  "Too small" = 0.10,
+  "Near optimal" = optimal_bandwidth,
+  "Too large" = 1.20
+)
+
+plot_grid <- seq(-4, 4, length.out = 2048)
+
+plot(
+  plot_grid,
+  dnorm(plot_grid),
+  type = "l",
+  lwd = 3,
+  col = "black",
+  xlab = "x",
+  ylab = "Density",
+  main = "Effect of bandwidth on a Gaussian KDE"
+)
+
+comparison_colours <- c("orange", "blue", "purple")
+
+for (index in seq_along(comparison_bandwidths)) {
+  current_estimate <- density(
+    bandwidth_sample,
+    bw = comparison_bandwidths[index],
+    kernel = "gaussian",
+    from = -4,
+    to = 4,
+    n = 2048
+  )
+
+  lines(
+    current_estimate,
+    col = comparison_colours[index],
+    lwd = 2
+  )
+}
+
+legend(
+  "topright",
+  legend = c(
+    "True N(0,1) density",
+    paste0(names(comparison_bandwidths),
+           " (h = ", comparison_bandwidths, ")")
+  ),
+  col = c("black", comparison_colours),
+  lwd = c(3, 2, 2, 2),
+  bty = "n"
+)
+```
+
+### Bias–variance trade-off
+
+- **Small bandwidth:** The KDE follows individual observations closely. Its bias is low, but its variance is high, producing a rough curve with many potentially artificial peaks. This is **under-smoothing**.
+- **Large bandwidth:** Random fluctuations are averaged away, so variance is low. However, real features of the density may also be flattened, producing high bias. This is **over-smoothing**.
+- **Intermediate bandwidth:** The ISE minimum balances squared bias and variance for this particular sample.
+
+Conceptually, the expected integrated error can be decomposed as
+
+$$\operatorname{MISE}(h)
+=\int \operatorname{Bias}\{\widehat f_h(x)\}^2\,dx
++\int \operatorname{Var}\{\widehat f_h(x)\}\,dx.$$
+
+As $h$ increases, integrated variance generally decreases while integrated squared bias increases. Their competing movement creates the characteristic minimum in the error curve.
+
+In real data analysis, the true density is unknown, so ISE cannot be calculated directly. Practical bandwidth selectors therefore use methods such as cross-validation or plug-in rules; R's `density()` provides data-driven defaults such as `bw.nrd0()`.
+
+## Final Summary
+
+- A probability-density histogram has total bar area equal to 1, and its appearance changes with the number of bins.
+- A KDE provides a smooth, non-parametric density estimate; its bandwidth is usually more influential than its kernel shape.
+- Integrating a KDE estimates probabilities such as $P(X>1.7)$.
+- Under a Gaussian model, the MLE of $\mu$ is the sample mean, while the MLE of $\sigma$ uses the divisor $n$.
+- ISE measures the total squared discrepancy between an estimated density and a known true density.
+- Very small bandwidths have high variance; very large bandwidths have high bias.
+- The optimal bandwidth minimises ISE by balancing under-smoothing and over-smoothing.

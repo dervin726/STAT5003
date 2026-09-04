@@ -1,0 +1,394 @@
+---
+title: "Project Planning and Exploratory Data Analysis"
+subtitle: "Classifying Self-Rated Health in the 2024 Behavioral Risk Factor Surveillance System"
+author: "STAT5003"
+date: last-modified
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    code-tools: true
+    fig-width: 9
+    fig-height: 5
+execute:
+  echo: true
+  warning: false
+  message: false
+  cache: true
+---
+
+## 1. Framing and dataset selection
+
+### 1.1 Real-world classification task
+
+This project investigates whether an adult's self-reported general health can be classified from demographic characteristics, modifiable health behaviours, access to health care, and diagnosed chronic-condition indicators. The response variable is `GENHLTH` in the 2024 Behavioral Risk Factor Surveillance System (BRFSS). Its five valid categories are **Excellent**, **Very good**, **Good**, **Fair**, and **Poor**. Because these categories have a natural order, this is an ordinal multi-class classification problem.
+
+Responses recorded as "Don't know/not sure", "Refused", or missing are not health classes and will be excluded from the response variable. They will be investigated as non-response before exclusion.
+
+### 1.2 Research question
+
+> How accurately can adults' self-reported general health---excellent, very good, good, fair, or poor---be classified using demographic characteristics, modifiable health behaviours, health-care access, and diagnosed chronic-condition indicators in the 2024 BRFSS survey?
+
+This wording is intentionally predictive rather than causal. BRFSS is a cross-sectional observational survey, so associations found in these data do not establish that a predictor causes a change in health.
+
+### 1.3 Motivation and stakeholders
+
+Self-rated health is a broad summary of physical, mental, and social wellbeing. A model that identifies profiles associated with fair or poor health could help public-health agencies detect groups requiring additional support, target preventive programs, investigate health inequalities, and allocate limited resources. Community organisations and health researchers could also use the findings to identify barriers related to health-care access or modifiable behaviours.
+
+The people represented by the survey may benefit from better-targeted services. However, classification errors could reinforce existing inequalities or stigmatise disadvantaged groups. The model should therefore be treated as a population-planning and research tool, not as a clinical diagnosis or as a basis for denying insurance, treatment, or other services. Performance should be audited across major demographic and geographic groups.
+
+## 2. Data source and provenance
+
+The BRFSS is a continuing telephone survey coordinated by the United States Centers for Disease Control and Prevention (CDC). It measures health-related risk behaviours, chronic conditions, health-care access, and use of preventive services among adults. The CDC describes BRFSS as the world's largest continuously conducted health survey system.
+
+The analysis uses the official 2024 combined landline and cellular telephone public-use file. It includes data submitted by 49 states, the District of Columbia, Guam, Puerto Rico, and the US Virgin Islands. Tennessee did not collect enough data to satisfy the requirements for inclusion in the 2024 public file. The file was released in August 2025.
+
+The canonical download is the CDC file `LLCP2024XPT.zip`. Because the CDC content-delivery network rejected automated retrieval from this project environment, the local copy was obtained from a [public GitHub mirror](https://github.com/DhanushGWU1995/6103-data-mining-project/blob/main/Raw_input_data_files/LLCP2024XPT.zip) that identifies the CDC page as its source. The archive was validated by reading the complete transport file: it contains 457,670 rows and 301 columns. Its SHA-256 checksum is `D33DE91A584E866F657D29B1D5B51B5672467286ED22D021E36EE3C7B4D712A4`.
+
+Primary sources are:
+
+- [CDC BRFSS program website](https://www.cdc.gov/brfss/)
+- [2024 BRFSS survey data and documentation](https://www.cdc.gov/brfss/annual_data/annual_2024.html)
+- [2024 calculated-variable documentation](https://www.cdc.gov/brfss/annual_data/2024/pdf/2024-calculated-variables-version4-508.pdf)
+- [2024 complex sampling and weighting guidance](https://www.cdc.gov/brfss/annual_data/2024/pdf/Complex-Sampling-Weights-and-Preparing-Module-Data-for-Analysis-2024-508.pdf)
+- [2024 summary data-quality report](https://www.cdc.gov/brfss/annual_data/2024/pdf/2024-DQR-508.pdf)
+
+The source is governmental rather than Kaggle, is not a built-in R dataset, and does not concern any of the prohibited assignment topics.
+
+## 3. Data import and initial audit
+
+The original CDC ZIP archive is stored beside this report as `LLCP2024XPT.zip`. To avoid permanently expanding a large file inside the project, the following code extracts the SAS transport file to the R session's temporary directory.
+
+```{r}
+#| label: setup
+#| include: false
+
+required_packages <- c("haven", "dplyr", "tidyr", "ggplot2", "scales")
+missing_packages <- required_packages[
+  !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)
+]
+
+if (length(missing_packages) > 0) {
+  stop(
+    "Install the following packages before rendering: ",
+    paste(missing_packages, collapse = ", ")
+  )
+}
+
+library(haven)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+
+theme_set(theme_minimal(base_size = 12))
+```
+
+```{r}
+#| label: import-data
+
+data_zip <- "LLCP2024XPT.zip"
+stopifnot(file.exists(data_zip))
+
+archive_contents <- unzip(data_zip, list = TRUE)
+xpt_members <- archive_contents$Name[
+  grepl("\\.xpt[[:space:]]*$", archive_contents$Name, ignore.case = TRUE)
+]
+
+if (length(xpt_members) != 1) {
+  stop(
+    "Expected exactly one XPT file in the archive, but found ",
+    length(xpt_members),
+    ". Archive members: ",
+    paste(shQuote(archive_contents$Name), collapse = ", ")
+  )
+}
+
+extract_dir <- file.path(tempdir(), "brfss_2024")
+dir.create(extract_dir, recursive = TRUE, showWarnings = FALSE)
+unzip(data_zip, exdir = extract_dir, overwrite = TRUE)
+
+# The mirrored ZIP has one trailing space in its internal member name.
+# Locate the extracted file again so this works whether the operating system
+# preserves or removes that trailing space.
+xpt_candidates <- list.files(
+  extract_dir,
+  pattern = "\\.xpt[[:space:]]*$",
+  full.names = TRUE,
+  ignore.case = TRUE
+)
+
+xpt_candidates <- xpt_candidates[file.info(xpt_candidates)$isdir %in% FALSE]
+if (length(xpt_candidates) != 1) {
+  stop("Could not identify exactly one extracted XPT file in ", extract_dir)
+}
+
+xpt_path <- xpt_candidates[[1]]
+brfss_raw <- read_xpt(xpt_path)
+```
+
+```{r}
+#| label: dimensions
+
+dimension_summary <- tibble(
+  observations = nrow(brfss_raw),
+  variables = ncol(brfss_raw)
+)
+
+dimension_summary
+```
+
+The local transport file contains **457,670 observations and 301 variables**. The CDC's [year-by-year surveillance table](https://www.cdc.gov/brfss/annual_data/all_years/states_data.htm) also reports 301 variables for 2024, although the 2024 download page describes the transport file as having 345 variables. The dimensions of the actual data file are used throughout this report, and the documentation discrepancy is retained as a data-provenance issue rather than silently ignored.
+
+## 4. Dataset justification
+
+The dataset satisfies four of the assignment criteria directly.
+
+| Requirement | Evidence |
+|:--|:--|
+| Large | 457,670 observations, far above the 10,000-observation threshold |
+| Messy | Genuine and structural missingness, special non-response codes, skip logic, and optional modules |
+| Complex | 301 variables with mixed measurement roles and types |
+| Multi-class | Five valid ordered classes in `GENHLTH` |
+
+No claim of integration is needed to reach the minimum of three requirements.
+
+### 4.1 Large size
+
+A dense numeric matrix with 457,670 rows and 301 columns would contain approximately 138 million values. At eight bytes per numeric value, this is about 1.10 GB before accounting for labels and R object overhead. Computational precautions include selecting necessary columns early, avoiding unnecessary copies, using vectorised summaries, sampling only for expensive visualisations, and retaining a separate test set. More computationally demanding models may require parallel processing or a justified training subsample.
+
+```{r}
+#| label: object-size
+
+tibble(
+  object_size_mb = round(as.numeric(object.size(brfss_raw)) / 1024^2, 1),
+  theoretical_numeric_matrix_gb = round(
+    nrow(brfss_raw) * ncol(brfss_raw) * 8 / 1024^3,
+    2
+  )
+)
+```
+
+### 4.2 Messiness and missingness
+
+Missingness in BRFSS can arise because a respondent refused or did not know an answer, a question was skipped by design, or an optional module was not administered in a jurisdiction. The CDC also warns that the 2024 public file contains apparent inconsistencies caused by questions removed from the released data.
+
+Some non-responses are stored as special numeric values such as 7, 9, 77, or 99 rather than `NA`. Their interpretation varies by question. Consequently, they must be recoded variable by variable using the codebook; replacing these values globally would destroy valid observations. The first audit below displays native `NA` values only and therefore provides a conservative estimate of total non-response.
+
+```{r}
+#| label: missingness-summary
+#| fig-cap: "Variables with the highest proportions of native missing values. Special non-response codes have not yet been converted to NA."
+
+missing_summary <- tibble(
+  variable = names(brfss_raw),
+  missing_n = vapply(brfss_raw, function(x) sum(is.na(x)), integer(1)),
+  missing_proportion = vapply(brfss_raw, function(x) mean(is.na(x)), numeric(1))
+) |>
+  arrange(desc(missing_proportion))
+
+missing_summary |>
+  slice_head(n = 30) |>
+  ggplot(aes(x = reorder(variable, missing_proportion),
+             y = missing_proportion)) +
+  geom_col(fill = "#2878B5") +
+  coord_flip() +
+  scale_y_continuous(labels = percent) +
+  labs(
+    title = "Variables with the most native missingness",
+    subtitle = "Top 30 variables; coded unknown/refused responses are not yet counted",
+    x = NULL,
+    y = "Missing proportion"
+  )
+```
+
+The next plot shows whether missing values tend to occur together. A reproducible random sample is used so that the graphic remains legible.
+
+```{r}
+#| label: missingness-pattern
+#| fig-cap: "Co-occurrence of missing values among a sample of respondents for the 20 variables with the highest native missingness."
+
+set.seed(5003)
+top_missing_variables <- missing_summary |>
+  slice_head(n = 20) |>
+  pull(variable)
+
+missing_pattern <- brfss_raw |>
+  slice_sample(n = min(1000, nrow(brfss_raw))) |>
+  select(all_of(top_missing_variables)) |>
+  mutate(across(everything(), is.na)) |>
+  mutate(sample_row = row_number()) |>
+  pivot_longer(
+    cols = -sample_row,
+    names_to = "variable",
+    values_to = "missing"
+  ) |>
+  mutate(status = if_else(missing, "Missing", "Observed"))
+
+ggplot(missing_pattern,
+       aes(x = sample_row, y = factor(variable, levels = rev(top_missing_variables)),
+           fill = status)) +
+  geom_raster() +
+  scale_fill_manual(values = c("Missing" = "#D73027", "Observed" = "#E8E8E8")) +
+  labs(
+    title = "Missingness pattern in a sample of 1,000 respondents",
+    x = "Sampled respondent",
+    y = NULL,
+    fill = NULL
+  ) +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank())
+```
+
+This analysis should be repeated after variable-specific non-response codes have been recoded. Variables with very high structural missingness may need to be excluded or analysed only within the relevant questionnaire subgroup.
+
+### 4.3 Complexity
+
+The public-use file contains more than 100 variables and combines several measurement types. Examples include continuous measurements and counts, binary condition indicators, nominal categories, ordered categories, survey design fields, and calculated variables. SAS labels are imported by `haven`, but many categorical variables are physically stored as numbers; R storage class is therefore not the same as statistical measurement type.
+
+```{r}
+#| label: storage-types
+
+storage_types <- tibble(
+  variable = names(brfss_raw),
+  storage_class = vapply(
+    brfss_raw,
+    function(x) paste(class(x), collapse = "/"),
+    character(1)
+  )
+) |>
+  count(storage_class, sort = TRUE)
+
+storage_types
+```
+
+The dimensionality creates risks of redundant variables, sparse categories, overfitting, and target leakage. A modelling data dictionary should classify each candidate feature by its conceptual type and document its recoding. Feature selection should be based on the research question and codebook, not on indiscriminately including every available column.
+
+### 4.4 Multi-class response and imbalance
+
+The valid `GENHLTH` response codes are converted to an ordered factor. Unknown, refused, and native missing responses are retained as missing rather than being invented as a sixth health category.
+
+A complete streaming audit of the supplied archive produced the following unweighted distribution. There are 456,360 valid target observations; a further 915 respondents selected "Don't know/not sure" and 390 refused the question.
+
+| Health class | Count | Percentage of valid responses |
+|:--|--:|--:|
+| Excellent | 64,217 | 14.07% |
+| Very good | 145,791 | 31.95% |
+| Good | 156,229 | 34.23% |
+| Fair | 67,919 | 14.88% |
+| Poor | 22,204 | 4.87% |
+
+The largest valid class is therefore approximately seven times the size of the smallest valid class. The executable code below independently reproduces the table and visualisation from the data.
+
+```{r}
+#| label: create-outcome
+
+health_levels <- c("Excellent", "Very good", "Good", "Fair", "Poor")
+
+brfss <- brfss_raw |>
+  mutate(
+    health_status = factor(
+      if_else(GENHLTH %in% 1:5, as.integer(GENHLTH), NA_integer_),
+      levels = 1:5,
+      labels = health_levels,
+      ordered = TRUE
+    )
+  )
+
+class_distribution <- brfss |>
+  filter(!is.na(health_status)) |>
+  count(health_status, name = "sample_n") |>
+  mutate(sample_proportion = sample_n / sum(sample_n))
+
+class_distribution
+```
+
+```{r}
+#| label: class-distribution-plot
+#| fig-cap: "Unweighted sample distribution of the five self-rated health classes."
+
+ggplot(class_distribution,
+       aes(x = health_status, y = sample_n, fill = health_status)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(
+    aes(label = percent(sample_proportion, accuracy = 0.1)),
+    vjust = -0.35,
+    size = 3.5
+  ) +
+  scale_y_continuous(
+    labels = comma,
+    expand = expansion(mult = c(0, 0.10))
+  ) +
+  scale_fill_brewer(palette = "Blues", direction = -1) +
+  labs(
+    title = "Distribution of self-rated general health",
+    subtitle = "Unknown, refused, and missing responses excluded",
+    x = "Health class",
+    y = "Number of respondents"
+  )
+```
+
+For population description, the survey-weighted distribution should also be reported. The following calculation uses the final person-level weight, `_LLCPWT`.
+
+```{r}
+#| label: weighted-class-distribution
+
+weighted_class_distribution <- brfss |>
+  filter(!is.na(health_status), !is.na(.data[["_LLCPWT"]])) |>
+  group_by(health_status) |>
+  summarise(
+    weighted_population = sum(.data[["_LLCPWT"]], na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  mutate(weighted_proportion = weighted_population / sum(weighted_population))
+
+weighted_class_distribution
+```
+
+Class imbalance is expected because poor health is less frequent than good or very good health. Overall accuracy could consequently conceal poor detection of minority classes. Evaluation should include macro-averaged F1, balanced accuracy, per-class recall, a confusion matrix, and an ordinal measure such as weighted Cohen's kappa.
+
+## 5. Planned data preparation
+
+The following steps will be completed before modelling:
+
+1. Select predictors belonging to four pre-specified domains: demographics, modifiable behaviours, health-care access, and diagnosed chronic conditions.
+2. Consult the codebook to convert variable-specific unknown and refused codes to missing values.
+3. Convert nominal and ordered codes to appropriately labelled factors.
+4. Investigate impossible values and influential outliers in genuinely continuous variables.
+5. Remove identifiers, interview-administration fields, and variables unavailable at the intended prediction point.
+6. Split the observations into training and test sets using stratification by `health_status` before estimating imputation, category pooling, scaling, or resampling parameters.
+7. Fit all preprocessing only on the training set and apply the learned transformations unchanged to the test set.
+
+Optional modules require particular caution because their missingness is often determined by state and questionnaire version. Treating structural missingness as ordinary individual-level non-response could create spurious geographic signals.
+
+## 6. Modelling decisions informed by EDA
+
+The natural ordering of the response supports comparing an ordinal regression model with ordinary multi-class methods. A proportional-odds logistic model will provide an interpretable baseline. Regularised multinomial regression and a tree-based model can then capture non-linearity and interactions.
+
+The model must not use `GENHLTH` as a predictor. The calculated variable `_RFHLTH` must also be excluded because the CDC derives it directly from `GENHLTH`; including it would leak the target and produce misleadingly high performance. Other calculated variables will be checked for direct dependence on the outcome before inclusion.
+
+Model selection will use cross-validation within the training data. The final test set will be used once for an unbiased comparison. In addition to random stratified validation, performance by state or region should be investigated to determine whether the model generalises geographically.
+
+Survey weights and predictive modelling answer different questions. Weighted summaries estimate population characteristics, while a classifier may optimise individual-level predictions. The report will state explicitly when weights are used and will compare weighted and unweighted evaluation where appropriate.
+
+## 7. Limitations and ethical considerations
+
+- BRFSS is based on self-report and may contain recall and social-desirability bias.
+- Telephone survey non-response may leave selection bias even after weighting.
+- The data are cross-sectional, preventing causal conclusions.
+- Optional modules create geographically structured missingness.
+- The outcome is subjective and may be interpreted differently across cultures and demographic groups.
+- The sample represents the United States and participating territories, so direct transfer to Australia or other countries would require external validation.
+- The CDC notes that the 2024 file was modified and that removed questions may create apparent missing-data inconsistencies.
+- Aggregate model quality does not guarantee fairness; class-specific performance and errors across demographic groups must be reported.
+
+Despite these limitations, BRFSS is suitable for the proposed investigation because it is large, genuinely messy, high-dimensional, multi-class, well documented, and directly relevant to public-health decision-making.
+
+## References
+
+Centers for Disease Control and Prevention. (2025). *2024 BRFSS survey data and documentation*. <https://www.cdc.gov/brfss/annual_data/annual_2024.html>
+
+Centers for Disease Control and Prevention. (2025). *Calculated variables in the 2024 data file of the Behavioral Risk Factor Surveillance System*. <https://www.cdc.gov/brfss/annual_data/2024/pdf/2024-calculated-variables-version4-508.pdf>
+
+Centers for Disease Control and Prevention. (2025). *Complex sampling weights and preparing 2024 BRFSS module data for analysis*. <https://www.cdc.gov/brfss/annual_data/2024/pdf/Complex-Sampling-Weights-and-Preparing-Module-Data-for-Analysis-2024-508.pdf>
+
+Centers for Disease Control and Prevention. (2025). *The Behavioral Risk Factor Surveillance System's 2024 summary data quality report*. <https://www.cdc.gov/brfss/annual_data/2024/pdf/2024-DQR-508.pdf>

@@ -1,0 +1,381 @@
+---
+title: "项目规划与探索性数据分析"
+subtitle: "维多利亚州道路事故严重程度分类"
+author: "STAT5003"
+date: last-modified
+lang: zh
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    code-fold: true
+    theme: cosmo
+execute:
+  echo: true
+  warning: false
+  message: false
+  cache: true
+---
+
+# 执行摘要
+
+本项目使用维多利亚州政府发布的 **Victorian Road Crash Data**，研究能否根据事故发生时间、地点、道路环境、照明条件、限速和事故类型等信息，将道路事故严重程度分类为 **Fatal accident（死亡事故）**、**Serious injury accident（重伤事故）**和 **Other injury accident（其他受伤事故）**。
+
+本地整合数据包含 **200,352 条事故记录和 52 个变量**，时间范围为 2012–2025 年。该数据集明确满足作业的 **Large、Messy、Integrated 和 Multi-class** 四项要求，而且来自澳大利亚官方开放数据门户。与 BRFSS 相比，其行数和变量数更少；与 UCI HAR 相比，它具有更真实的缺失、未知编码、时间变化和类别不平衡问题。
+
+# 研究问题
+
+> 在不使用事故伤亡结果所直接派生变量的前提下，能够在多大程度上根据事故时间、地点、道路环境和事故特征，对维多利亚州道路事故的严重程度进行多分类？
+
+该问题是预测性的，而不是因果性的。观察到某项道路特征与事故严重程度相关，并不能证明该特征造成了严重事故。事故报告、道路设计、交通流量、驾驶行为和车辆安全性之间可能同时存在复杂关系。
+
+## 现实意义与利益相关者
+
+事故严重程度模型可以帮助道路管理机构识别需要进一步调查的高风险环境、确定基础设施审查优先级，并支持道路安全资源配置。潜在利益相关者包括维州交通与规划部门、地方政府、警方、紧急服务、道路使用者和社区。
+
+模型不应直接用于认定个人责任、自动执法或保险定价。严重程度标签反映已经发生的后果，模型输出存在误差，也可能受到报告制度和历史基础设施投资差异的影响。
+
+# 数据来源与可追溯性
+
+数据来自维多利亚州政府 **Department of Transport and Planning** 发布的 [Victoria road crash data](https://data.gov.au/data/dataset/victoria-road-crash-data)。政府页面说明，数据由维州警方报告和医院伤害信息汇总、验证并补充，涵盖事故时间、地点、严重程度、道路条件、事故类型、车辆和道路使用者等属性。
+
+本项目使用官方提供的整合版 CSV：
+
+<https://opendata.transport.vic.gov.au/dataset/bb77800e-1857-4edc-bf9e-e188437a1c8e/resource/5df1f373-0c90-48f5-80e1-7b2a35507134/download/victorian_road_crash_data.csv>
+
+本地文件名为 `victorian_road_crash_data.csv`，下载日期为 2026 年 9 月 3 日，SHA-256 校验值为：
+
+```text
+19B8D027B2194C33588F4296B2B0BBBF82757182F0ABB68693192CE8DFF56F11
+```
+
+数据采用 Creative Commons Attribution 3.0 Australia 许可。政府同时发布事故、人员、车辆、事故事件、道路表面、天气、位置和节点等关系表；本项目使用的整合 CSV 已将这些来源中的事故级字段汇总为一张表。因此，报告将 `Integrated` 作为有官方元数据支持的要求，而不是仅凭字段数量推断。
+
+官方提示近期死亡事故记录可能是临时数据，后续可能被修改或删除。因此，分析结果必须记录下载日期，不能假定未来下载的文件与本地副本完全相同。
+
+# 数据读取与初步审计
+
+```{r}
+#| label: setup
+#| include: false
+
+required_packages <- c("dplyr", "tidyr", "ggplot2", "scales", "knitr")
+missing_packages <- required_packages[
+  !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)
+]
+if (length(missing_packages) > 0) {
+  stop("渲染前请安装以下 R 包：", paste(missing_packages, collapse = ", "))
+}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(knitr)
+
+theme_set(theme_minimal(base_size = 12, base_family = "Arial Unicode MS"))
+```
+
+```{r}
+#| label: import-data
+
+data_path <- "victorian_road_crash_data.csv"
+stopifnot(file.exists(data_path))
+
+crashes_raw <- read.csv(
+  data_path,
+  check.names = FALSE,
+  stringsAsFactors = FALSE,
+  na.strings = c("", "NA")
+)
+
+crashes <- crashes_raw |>
+  mutate(
+    accident_date = as.Date(ACCIDENT_DATE),
+    year = as.integer(format(accident_date, "%Y")),
+    month = as.integer(format(accident_date, "%m")),
+    hour = suppressWarnings(as.integer(substr(ACCIDENT_TIME, 1, 2))),
+    severity = factor(
+      SEVERITY,
+      levels = c(
+        "Other injury accident",
+        "Serious injury accident",
+        "Fatal accident"
+      ),
+      ordered = TRUE
+    )
+  )
+```
+
+## 数据维度与时间范围
+
+```{r}
+#| label: dimensions
+
+dimension_summary <- tibble(
+  指标 = c(
+    "观测数", "变量数", "唯一事故编号数", "重复事故编号数",
+    "最早事故日期", "最晚事故日期"
+  ),
+  数值 = c(
+    nrow(crashes_raw),
+    ncol(crashes_raw),
+    n_distinct(crashes_raw$ACCIDENT_NO),
+    sum(duplicated(crashes_raw$ACCIDENT_NO)),
+    as.character(min(crashes$accident_date, na.rm = TRUE)),
+    as.character(max(crashes$accident_date, na.rm = TRUE))
+  )
+)
+
+kable(dimension_summary, align = c("l", "r"))
+```
+
+每一行对应一宗事故，`ACCIDENT_NO` 在当前文件中没有重复。需要注意，52 个原始变量中既有事故属性，也有从人员和车辆记录汇总得到的计数；在预测严重程度时，不能机械地将全部字段都作为预测变量。
+
+# 作业要求匹配度
+
+| 要求 | 是否满足 | 证据 |
+|:--|:--:|:--|
+| Large | 是 | 200,352 条事故记录，远高于 10,000 条门槛 |
+| Messy | 是 | 原生缺失、`Unknown`／`Not known` 字符编码、罕见异常类别、近期临时记录和时间变化 |
+| Integrated | 是 | 官方整合 CSV 汇总事故、人员、车辆、地点及道路环境等来源 |
+| Multi-class | 是 | 三个主要受伤严重程度类别；原文件另有 4 条非受伤事故 |
+| Complex | 不主张 | 52 个变量，未达到课程采用的 100 变量门槛 |
+
+该数据集即使不主张 `Complex`，仍明确满足四项要求，超过至少三项的最低标准。
+
+# 探索性数据分析
+
+## 严重程度类别分布
+
+原始 `SEVERITY` 中有四条 `Non injury accident`。由于数据集定义主要覆盖死亡和受伤事故，而且四条记录不足以支持一个可学习的类别，建模前应将其作为范围不一致记录单独审计，而不是强行作为第四个预测类别。
+
+```{r}
+#| label: severity-table
+
+severity_distribution <- crashes_raw |>
+  count(SEVERITY, name = "事故数") |>
+  mutate(比例 = 事故数 / sum(事故数)) |>
+  arrange(desc(事故数))
+
+kable(
+  severity_distribution |>
+    mutate(比例 = percent(比例, accuracy = 0.01)),
+  align = c("l", "r", "r")
+)
+```
+
+```{r}
+#| label: severity-plot
+#| fig-cap: "维多利亚州道路事故严重程度分布。"
+
+severity_distribution |>
+  filter(SEVERITY != "Non injury accident") |>
+  ggplot(aes(x = reorder(SEVERITY, 事故数), y = 事故数, fill = SEVERITY)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = comma(事故数)), hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  scale_y_continuous(labels = comma,
+                     expand = expansion(mult = c(0, 0.12))) +
+  labs(title = "事故严重程度类别明显不平衡", x = NULL, y = "事故数")
+```
+
+`Other injury accident` 是最大类别，`Fatal accident` 是最小主要类别。仅报告总体准确率会掩盖死亡事故识别能力不足的问题，因此必须报告 Macro F1、balanced accuracy 和每类召回率。
+
+## 缺失与特殊未知编码
+
+文件中的数据问题既包括真正的 `NA`，也包括存储为普通字符串的 `Unknown`、`Not known`、`Unclassified` 和 `Not applicable`。不能只使用 `is.na()` 判断完整性。
+
+```{r}
+#| label: missingness-audit
+
+special_missing_pattern <- paste(
+  c("unknown", "not known", "unclassified", "not applicable", "^-?$"),
+  collapse = "|"
+)
+
+missing_summary <- tibble(
+  variable = names(crashes_raw),
+  native_missing = vapply(crashes_raw, function(x) sum(is.na(x)), integer(1)),
+  coded_missing = vapply(
+    crashes_raw,
+    function(x) {
+      if (!is.character(x)) return(0L)
+      sum(grepl(special_missing_pattern, tolower(trimws(x))), na.rm = TRUE)
+    },
+    integer(1)
+  )
+) |>
+  mutate(
+    total_flagged = native_missing + coded_missing,
+    flagged_proportion = total_flagged / nrow(crashes_raw)
+  ) |>
+  arrange(desc(flagged_proportion))
+
+kable(
+  missing_summary |>
+    slice_head(n = 20) |>
+    mutate(flagged_proportion = percent(flagged_proportion, accuracy = 0.1)),
+  col.names = c(
+    "变量", "原生缺失", "特殊未知编码", "合计", "占比"
+  ),
+  align = c("l", "r", "r", "r", "r")
+)
+```
+
+```{r}
+#| label: missingness-plot
+#| fig-cap: "缺失或特殊未知编码占比最高的 15 个变量。"
+
+missing_summary |>
+  slice_head(n = 15) |>
+  ggplot(aes(x = reorder(variable, flagged_proportion),
+             y = flagged_proportion)) +
+  geom_col(fill = "#2C7FB8") +
+  coord_flip() +
+  scale_y_continuous(labels = percent) +
+  labs(title = "缺失和未知编码需要统一处理", x = NULL, y = "标记比例")
+```
+
+`SRNS` 等字段存在大量结构性缺失，而 `SPEED_ZONE`、`LIGHT_CONDITION` 和 `POLICE_ATTEND` 等字段包含特殊未知编码。清理方案必须逐变量参考数据字典；不能在全表中盲目替换所有数字或文本代码。
+
+## 年度记录数量与时间变化
+
+```{r}
+#| label: yearly-trend
+#| fig-cap: "2012–2025 年各严重程度的事故记录数量。"
+
+crashes |>
+  filter(!is.na(severity)) |>
+  count(year, severity) |>
+  ggplot(aes(year, n, colour = severity)) +
+  geom_line(linewidth = 0.8) +
+  geom_point(size = 1.5) +
+  scale_x_continuous(breaks = 2012:2025) +
+  scale_y_continuous(labels = comma) +
+  labs(
+    title = "事故记录数量随年份和严重程度变化",
+    x = "年份", y = "事故数", colour = "严重程度"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+年度差异可能反映真实道路安全变化，也可能受到出行量、疫情、报告制度、数据修订和字段定义变化影响。因此，随机拆分全部年份可能高估对未来事故的泛化能力。
+
+## 道路环境与严重程度
+
+```{r}
+#| label: speed-severity
+#| fig-cap: "记录数最多的限速类别中，不同事故严重程度的构成。"
+
+top_speed_zones <- crashes |>
+  filter(!is.na(severity), !is.na(SPEED_ZONE)) |>
+  count(SPEED_ZONE, sort = TRUE) |>
+  slice_head(n = 10) |>
+  pull(SPEED_ZONE)
+
+crashes |>
+  filter(!is.na(severity), SPEED_ZONE %in% top_speed_zones) |>
+  count(SPEED_ZONE, severity) |>
+  group_by(SPEED_ZONE) |>
+  mutate(proportion = n / sum(n)) |>
+  ungroup() |>
+  ggplot(aes(x = reorder(SPEED_ZONE, -n, FUN = sum),
+             y = proportion, fill = severity)) +
+  geom_col() +
+  scale_y_continuous(labels = percent) +
+  labs(
+    title = "限速类别与事故严重程度存在描述性关联",
+    x = "限速类别", y = "类别内比例", fill = "严重程度"
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+该图只能说明样本中的关联。缺少道路暴露量（例如各道路的车辆行驶公里数）意味着不能把事故数量直接解释为某类道路的事故发生风险。
+
+# 目标泄漏审计
+
+严重程度 `SEVERITY` 是根据人员伤亡后果定义的。以下字段直接包含或汇总了该结果，不能用于预测严重程度：
+
+- `INJ_OR_FATAL`；
+- `FATALITY`；
+- `SERIOUSINJURY`；
+- `OTHERINJURY`；
+- `NONINJURED`。
+
+如果把这些字段作为预测变量，模型实际上是在用答案的组成部分预测答案，会得到虚假高分。`TOTAL_PERSONS`、人员角色计数和车辆计数虽然不直接等同于目标，但必须明确预期预测时点：如果目标是在事故记录完成后进行道路安全分析，它们可以使用；如果目标是在事故发生前预测风险，则这些信息不可用。
+
+还应排除唯一标识符 `ACCIDENT_NO`，并谨慎处理高基数位置字段，例如道路名称。直接使用道路名称可能使模型记住历史事故地点，而不是学习可推广的道路风险规律。
+
+# 数据准备与验证计划
+
+1. 删除四条 `Non injury accident`，将范围限定为三个主要受伤严重程度类别。
+2. 将变量特定的 `Unknown`、`Not known`、`Unclassified` 和 `Not applicable` 转换为缺失，同时保留“结构性不适用”和“未知”的区别（若数据字典允许）。
+3. 将日期拆分为年份、月份和季节，将时间转换为小时或时间段，并检查无效时间。
+4. 将类别变量转换为 factor；对稀有类别进行训练集内合并。
+5. 删除目标泄漏字段、事故编号以及不符合预测时点的变量。
+6. 使用 2012–2023 年作为开发数据，将 2024–2025 年作为时间外测试集，以评价对较新事故的泛化能力。
+7. 在开发数据内部进行按年份分组或滚动时间交叉验证。
+8. 所有插补、类别合并和编码参数只能在训练数据中估计，再原样应用于验证／测试数据。
+9. 如需进行类别加权或重采样，只能在每个训练折内部进行。
+
+时间拆分比随机行拆分更严格，但更符合道路安全系统面向未来记录的实际使用场景。由于官方指出近期数据可能修订，最终报告还应进行一次敏感性分析，例如排除最新一年后重复评价。
+
+# 建模方案
+
+## 基线模型
+
+- 多数类别分类器，作为最低性能基准；
+- 多项 Logistic 回归，提供可解释的线性基线；
+- 有序 Logistic 回归，利用“其他受伤—重伤—死亡”的自然顺序，但必须检查比例优势假设。
+
+## 扩展模型
+
+- 正则化多项 Logistic 回归；
+- Random Forest；
+- Gradient boosting，并通过类别权重改善死亡事故的识别。
+
+## 评价指标
+
+- Macro F1 和 balanced accuracy；
+- 每类 precision、recall 和 F1；
+- confusion matrix；
+- 死亡事故和重伤事故的单独召回率；
+- 按年份、地区、城乡类别和道路使用者构成分组的性能。
+
+总体 accuracy 不能作为唯一指标。死亡事故约占全部记录的很小比例，一个几乎从不预测死亡事故的模型仍可能获得较高准确率。
+
+# 优势、局限与伦理考虑
+
+## 优势
+
+- 来自澳大利亚州政府，具有明确的本地政策相关性；
+- 同时满足 Large、Messy、Integrated 和 Multi-class；
+- 200,352 行、52 列，计算规模适中；
+- 时间跨度长，支持时间外验证；
+- 数据问题、类别不平衡和目标泄漏风险能展示扎实的统计判断。
+
+## 局限
+
+- 数据只覆盖被警方及相关系统记录的事故，不代表所有道路事件；
+- 近期记录是临时数据，可能在未来修订；
+- 数据没有提供完整道路暴露量，不能直接估计每次出行或每公里风险；
+- 汇总字段会损失人员和车辆层面的细节；
+- 严重程度类别极度不平衡；
+- 历史数据中的道路、车辆、安全政策和报告制度可能随时间改变；
+- 结果只适用于维多利亚州，外推到其他州需要重新验证。
+
+## 伦理与公平性
+
+地理事故模型可能把历史投资不足或高交通暴露错误解释为社区本身的风险。公开报告应避免发布可识别个人的组合信息，也不应使用模型结果对特定道路使用者或社区进行污名化。资源配置决策应结合暴露量、社区咨询、工程审查和模型不确定性，而不能只依赖预测分数。
+
+# 总体建议
+
+Victorian Road Crash Data 是一个很强的澳大利亚候选方案。它比 BRFSS 小、比 UCI HAR 更贴近真实公共数据问题，而且四项作业要求都有直接证据。其最值得展示的分析重点是：整合数据结构、混合缺失编码、严重类别不平衡、时间变化，以及由伤亡计数字段造成的目标泄漏。只要严格限定预测时点并采用时间外验证，该项目能够形成清晰且有现实意义的多分类分析。
+
+# 参考文献
+
+Department of Transport and Planning Victoria. (2025). *Victoria road crash data*. Data.gov.au. <https://data.gov.au/data/dataset/victoria-road-crash-data>
+
+Department of Transport and Planning Victoria. (2026). *Victorian Road Crash Data* [CSV, accessed 3 September 2026]. <https://opendata.transport.vic.gov.au/dataset/bb77800e-1857-4edc-bf9e-e188437a1c8e/resource/5df1f373-0c90-48f5-80e1-7b2a35507134/download/victorian_road_crash_data.csv>

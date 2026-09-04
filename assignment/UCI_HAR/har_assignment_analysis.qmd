@@ -1,0 +1,361 @@
+---
+title: "Project Planning and Exploratory Data Analysis"
+subtitle: "Recognising Daily Activities from Smartphone Sensors"
+author: "STAT5003"
+date: last-modified
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+    code-tools: true
+    fig-width: 9
+    fig-height: 5
+execute:
+  echo: true
+  warning: false
+  message: false
+  cache: true
+---
+
+## 1. Framing and dataset selection
+
+### 1.1 Real-world classification task
+
+This project investigates whether a person's activity can be classified from measurements derived from a waist-mounted smartphone's accelerometer and gyroscope. The response has six categories: **Walking**, **Walking upstairs**, **Walking downstairs**, **Sitting**, **Standing**, and **Laying**. The categories have no complete natural order, so this is a nominal multi-class classification problem.
+
+### 1.2 Research question
+
+> How accurately can six common daily activities be classified from time- and frequency-domain smartphone sensor features for people who were not used to train the model?
+
+The final phrase is important. Multiple windows come from each participant, so a random row split could put the same person's movement patterns in both training and test data. The supplied participant-level split provides a more realistic assessment of generalisation to unseen people.
+
+### 1.3 Motivation and stakeholders
+
+Human activity recognition can support fitness tracking, context-aware mobile applications, workplace-safety systems, and—after suitable clinical validation—monitoring of mobility or rehabilitation. Stakeholders include device developers, researchers, clinicians, service providers, and people whose movements are measured.
+
+The analysis is a controlled-laboratory benchmark, not a clinical diagnostic system. Errors could lead to misleading health or safety inferences, while continuous motion sensing creates privacy and surveillance risks. Deployment would require consent, data minimisation, secure storage, testing on the intended population, and a clear way for users to opt out.
+
+## 2. Data source and provenance
+
+The **Human Activity Recognition Using Smartphones** dataset is published by the [UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones). It was created from 30 volunteers aged 19–48 who performed six activities while wearing a Samsung Galaxy S II on the waist. Accelerometer and gyroscope signals were recorded at 50 Hz. Fixed-width windows of 2.56 seconds with 50% overlap were transformed into 561 time- and frequency-domain features.
+
+The local file `UCI_HAR_Dataset.zip` was downloaded from UCI's official distribution endpoint. Its SHA-256 checksum is:
+
+``` text
+C00B803081A5C797CD5E4B83700A9810B38D53D9D84E01917E090E1FDBC81031
+```
+
+The data were originally described by Anguita et al. (2013). UCI distributes an established split containing 70% of the volunteers in training and 30% in testing. The local files contain 7,352 training windows and 2,947 test windows.
+
+This source is not Kaggle, is not a built-in R dataset, and does not concern the prohibited assignment topics.
+
+## 3. Data import and integrity checks
+
+The UCI download contains a second ZIP archive. The code extracts both layers to the R session's temporary directory, reads the supplied metadata, and combines the training and test portions while preserving their original roles.
+
+```{r}
+#| label: setup
+#| include: false
+
+required_packages <- c("dplyr", "tidyr", "ggplot2", "scales", "knitr")
+missing_packages <- required_packages[
+  !vapply(required_packages, requireNamespace, logical(1), quietly = TRUE)
+]
+if (length(missing_packages) > 0) {
+  stop("Install these packages before rendering: ",
+       paste(missing_packages, collapse = ", "))
+}
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(knitr)
+
+theme_set(theme_minimal(base_size = 12))
+```
+
+```{r}
+#| label: import-data
+
+data_zip <- "UCI_HAR_Dataset.zip"
+stopifnot(file.exists(data_zip))
+
+extract_root <- file.path(tempdir(), "uci_har_240")
+dir.create(extract_root, recursive = TRUE, showWarnings = FALSE)
+unzip(data_zip, exdir = extract_root, overwrite = TRUE)
+
+inner_zip <- list.files(
+  extract_root,
+  pattern = "UCI HAR Dataset[.]zip$",
+  full.names = TRUE
+)
+if (length(inner_zip) != 1) stop("Expected exactly one inner dataset ZIP.")
+
+unzip(inner_zip, exdir = extract_root, overwrite = TRUE)
+data_dir <- file.path(extract_root, "UCI HAR Dataset")
+
+feature_key <- read.table(
+  file.path(data_dir, "features.txt"),
+  col.names = c("feature_id", "feature_name"),
+  stringsAsFactors = FALSE
+)
+activity_key <- read.table(
+  file.path(data_dir, "activity_labels.txt"),
+  col.names = c("activity_id", "activity"),
+  stringsAsFactors = FALSE
+)
+
+# Eighty-four labels are repeated in the supplied feature metadata.
+# make.unique() preserves all 561 columns while giving R valid unique names.
+feature_names <- make.unique(feature_key$feature_name, sep = "__duplicate_")
+
+read_partition <- function(partition) {
+  x <- read.table(file.path(data_dir, partition, paste0("X_", partition, ".txt")))
+  names(x) <- feature_names
+  y <- scan(file.path(data_dir, partition, paste0("y_", partition, ".txt")),
+            quiet = TRUE)
+  subject <- scan(
+    file.path(data_dir, partition, paste0("subject_", partition, ".txt")),
+    quiet = TRUE
+  )
+
+  bind_cols(
+    tibble(partition = partition, subject = subject, activity_id = y),
+    as_tibble(x, .name_repair = "minimal")
+  ) |>
+    left_join(activity_key, by = "activity_id") |>
+    relocate(activity, .after = activity_id)
+}
+
+har <- bind_rows(read_partition("train"), read_partition("test")) |>
+  mutate(
+    partition = factor(partition, levels = c("train", "test")),
+    activity = factor(activity, levels = activity_key$activity)
+  )
+```
+
+```{r}
+#| label: integrity-audit
+
+predictor_names <- feature_names
+
+integrity_summary <- tibble(
+  check = c(
+    "Observations", "Sensor features", "Total analysis columns",
+    "Participants", "Missing predictor values", "Non-finite predictor values",
+    "Repeated raw feature labels", "Participants shared across partitions"
+  ),
+  value = c(
+    nrow(har), length(predictor_names), ncol(har),
+    n_distinct(har$subject),
+    sum(is.na(har[predictor_names])),
+    sum(!is.finite(as.matrix(har[predictor_names]))),
+    sum(duplicated(feature_key$feature_name)),
+    length(intersect(
+      unique(har$subject[har$partition == "train"]),
+      unique(har$subject[har$partition == "test"])
+    ))
+  )
+)
+
+kable(integrity_summary, align = c("l", "r"))
+```
+
+The integrity audit should return 10,299 observations, 561 sensor features, 30 participants, no missing or non-finite predictor values, 84 repeated raw feature labels, and no participant overlap between training and testing. The duplicate labels are a genuine metadata issue rather than duplicate data columns; they are repaired deterministically for software compatibility.
+
+## 4. Dataset justification
+
+The dataset clearly meets three assignment criteria without relying on debatable claims about messiness or integration.
+
+| Requirement | Evidence |
+|:---|:---|
+| Large | 10,299 observations, just above the 10,000-observation threshold |
+| Complex | 561 sensor features, well above the 100-variable threshold |
+| Multi-class | Six nominal activity classes |
+
+It is substantially smaller and easier to manage than the 2024 BRFSS alternative (457,670 rows and 301 variables). Its main challenge is high dimensionality rather than file size or missing-data recoding.
+
+### 4.1 Size and class balance
+
+```{r}
+#| label: class-distribution
+
+class_distribution <- har |>
+  count(activity, name = "sample_n") |>
+  mutate(sample_proportion = sample_n / sum(sample_n))
+
+kable(
+  class_distribution |>
+    mutate(sample_proportion = percent(sample_proportion, accuracy = 0.1)),
+  col.names = c("Activity", "Windows", "Share")
+)
+```
+
+```{r}
+#| label: class-distribution-plot
+#| fig-cap: "Distribution of the six activity classes across all 10,299 windows."
+
+ggplot(class_distribution,
+       aes(x = reorder(activity, sample_n), y = sample_n, fill = activity)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(label = percent(sample_proportion, accuracy = 0.1)),
+            hjust = -0.1, size = 3.5) +
+  coord_flip() +
+  scale_y_continuous(labels = comma,
+                     expand = expansion(mult = c(0, 0.12))) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title = "Activity classes are reasonably balanced",
+    x = NULL,
+    y = "Number of windows"
+  )
+```
+
+The largest class is `LAYING` and the smallest is `WALKING_DOWNSTAIRS`; their counts differ by less than a factor of 1.4. Accuracy is therefore interpretable, although macro F1 and per-class recall should still be reported because sitting and standing are physically similar and may have different error rates.
+
+### 4.2 High dimensionality and redundancy
+
+All 561 predictors are numeric summaries of sensor windows. They include means, standard deviations, signal-magnitude areas, correlations, autoregressive coefficients, frequency components, entropy measures, and angle variables. Having many transformations of related signals creates strong correlation and multicollinearity.
+
+```{r}
+#| label: feature-audit
+
+feature_sd <- vapply(har[predictor_names], sd, numeric(1))
+feature_unique <- vapply(har[predictor_names], n_distinct, integer(1))
+
+feature_summary <- tibble(
+  statistic = c(
+    "Predictors", "Zero-variance predictors", "Near-constant predictors (<= 10 values)",
+    "Minimum observed value", "Maximum observed value"
+  ),
+  value = c(
+    length(predictor_names), sum(feature_sd == 0), sum(feature_unique <= 10),
+    min(as.matrix(har[predictor_names])), max(as.matrix(har[predictor_names]))
+  )
+)
+
+kable(feature_summary, align = c("l", "r"), digits = 3)
+```
+
+```{r}
+#| label: correlation-audit
+
+correlation_matrix <- cor(as.matrix(har[predictor_names]))
+upper_correlations <- abs(correlation_matrix[upper.tri(correlation_matrix)])
+
+correlation_summary <- tibble(
+  threshold = c("|r| >= 0.80", "|r| >= 0.90", "|r| >= 0.95", "|r| >= 0.99"),
+  feature_pairs = c(
+    sum(upper_correlations >= 0.80),
+    sum(upper_correlations >= 0.90),
+    sum(upper_correlations >= 0.95),
+    sum(upper_correlations >= 0.99)
+  )
+)
+
+kable(correlation_summary, align = c("l", "r"))
+```
+
+The correlation audit quantifies why an unregularised model containing all variables would be unstable and difficult to interpret. Dimensionality reduction, regularisation, or carefully fitted feature selection is required. All such preprocessing must be estimated on the training partition only.
+
+### 4.3 Low-dimensional view of the activity structure
+
+Principal component analysis (PCA) gives a compact view of the 561-dimensional feature space. The PCA below is fitted only to the training data and then applied unchanged to the held-out participants.
+
+```{r}
+#| label: pca
+
+train_index <- har$partition == "train"
+pca_fit <- prcomp(
+  har[train_index, predictor_names],
+  center = TRUE,
+  scale. = TRUE
+)
+
+pca_scores <- predict(pca_fit, newdata = har[predictor_names])[, 1:2] |>
+  as_tibble() |>
+  bind_cols(har |> select(activity, partition))
+
+explained <- 100 * pca_fit$sdev^2 / sum(pca_fit$sdev^2)
+```
+
+```{r}
+#| label: pca-plot
+#| fig-cap: "First two principal components. PCA was fitted on the training participants only."
+
+ggplot(pca_scores, aes(PC1, PC2, colour = activity)) +
+  geom_point(alpha = 0.35, size = 0.7) +
+  facet_wrap(~partition) +
+  scale_colour_brewer(palette = "Dark2") +
+  labs(
+    title = "A two-component view separates broad activity types",
+    subtitle = paste0(
+      "PC1 and PC2 explain ", round(explained[1], 1), "% and ",
+      round(explained[2], 1), "% of standardised variance"
+    ),
+    colour = "Activity"
+  )
+```
+
+The plot is descriptive rather than a performance result. Separation in two components does not imply that a two-variable classifier is sufficient, and overlap is expected between the closely related postural classes `SITTING` and `STANDING`.
+
+## 5. Planned data preparation
+
+1.  Retain UCI's participant-level training and test split; do not randomly repartition individual windows.
+2.  Keep the test partition untouched until all model and preprocessing choices are final.
+3.  Repair duplicated feature names reproducibly and retain a mapping to the original metadata.
+4.  Estimate centring, scaling, PCA, correlation filtering, and any other feature selection using training data only.
+5.  Remove zero-variance predictors if present and consider a correlation filter or PCA for linear models.
+6.  Use grouped cross-validation by `subject` inside the training partition so validation participants are unseen during each fold.
+7.  Preserve all six response categories and report class-specific errors.
+
+Because overlapping time windows from one participant are dependent, treating all 10,299 rows as independent observations would exaggerate the effective sample size. Statistical inference and uncertainty estimates must respect participant clustering.
+
+## 6. Modelling decisions informed by EDA
+
+A suitable baseline is multinomial logistic regression after training-only standardisation and dimensionality reduction. A regularised multinomial model provides a stronger linear comparator. A tree-based method such as random forest or gradient boosting can model non-linear relationships and interactions, while support-vector machines are also plausible for this high-dimensional feature space.
+
+Model tuning should use grouped cross-validation by participant. Final evaluation should use the supplied test participants once. Recommended metrics are:
+
+- overall accuracy and macro F1;
+- balanced accuracy;
+- per-class precision and recall;
+- a six-by-six confusion matrix;
+- accuracy by held-out participant.
+
+The most informative errors are likely to be within the three dynamic activities or between sitting and standing. Confusing a static posture with a dynamic activity is qualitatively different from confusing two similar walking conditions, so the confusion matrix should accompany every aggregate metric.
+
+## 7. Strengths, limitations, and ethics
+
+### Strengths
+
+- It meets exactly three assignment requirements with objective numerical evidence.
+- At about 59 MB compressed and 10,299 rows, it is practical on an ordinary laptop.
+- The official subject-level split supports a defensible generalisation question.
+- Classes are reasonably balanced and labels were assigned using video recordings.
+- The 561 features provide substantial scope for dimensionality and correlation analysis.
+
+### Limitations
+
+- Only 30 participants aged 19–48 were studied, limiting population diversity.
+- Activities were scripted in controlled conditions, so performance may fall in free-living settings.
+- The phone was fixed at the waist; results may not transfer to a pocket, bag, wrist, or another device.
+- Overlapping windows are correlated and must not be treated as fully independent.
+- Engineered features conceal some raw-signal detail and include highly redundant transformations.
+- The dataset has no missing values, so it offers less opportunity to demonstrate missing-data methods.
+
+### Ethical considerations
+
+Motion data may reveal health conditions, routines, location-linked behaviour, or sensitive daily patterns. A deployed system would require informed consent, purpose limitation, secure processing, and explicit restrictions on employer, insurer, or surveillance use. Performance should be validated across ages, body types, mobility levels, devices, and carrying positions before consequential use.
+
+## 8. Overall recommendation
+
+This dataset is a strong lower-workload alternative to BRFSS. It satisfies the **Large**, **Complex**, and **Multi-class** criteria directly while remaining small enough for rapid iteration. Its clean structure shifts the analytical emphasis from missing-data processing to leakage-aware validation, high-dimensional feature reduction, correlated predictors, and participant-level generalisation. The project is particularly suitable if the group wants a technically rigorous classification problem without the memory and coding burden of the 2024 BRFSS file.
+
+## References
+
+Anguita, D., Ghio, A., Oneto, L., Parra, X., & Reyes-Ortiz, J. L. (2013). *A public domain dataset for human activity recognition using smartphones*. 21st European Symposium on Artificial Neural Networks, Computational Intelligence and Machine Learning, 437–442.
+
+Reyes-Ortiz, J. L., Anguita, D., Ghio, A., Oneto, L., & Parra, X. (2012). *Human Activity Recognition Using Smartphones* \[Dataset\]. UCI Machine Learning Repository. <https://doi.org/10.24432/C54S4K>
